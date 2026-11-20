@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb">
+  <meta name="description" content="Search the web with Jynex.">
+  <title>Jynex — Search the web</title>
+  <link rel="icon" href="./favicon.png" type="image/png">
+  <!-- JYNEX_STYLES -->
+
+</head>
+<body>
+  <main class="access-gate" id="accessGate" aria-live="polite">
+    <section class="access-card" aria-labelledby="accessTitle">
+      <a class="brand access-brand" href="./" aria-label="Jynex home">Jynex<span>.</span></a>
+      <section id="authPanel" class="gate-panel" aria-describedby="authStatus">
+        <p class="gate-eyebrow">Search starts here</p>
+        <h1 id="accessTitle">Welcome to Jynex</h1>
+        <p class="gate-copy">Create an account or sign in to continue.</p>
+        <form id="authForm" class="gate-form">
+          <label class="gate-field">Email address<input id="authEmail" type="email" autocomplete="email" required></label>
+          <label class="gate-field">Password<input id="authPassword" type="password" autocomplete="current-password" minlength="6" required></label>
+          <label class="gate-field" id="confirmPasswordField" hidden>Confirm password<input id="authConfirmPassword" type="password" autocomplete="new-password" minlength="6"></label>
+          <button class="gate-primary" id="authSubmit" type="submit">Sign in</button>
+        </form>
+        <div class="auth-divider"><span>or</span></div>
+        <button class="google-button" id="googleSignInButton" type="button">
+          <svg aria-hidden="true" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 24.5c0-1.4-.1-2.7-.4-4H24v7.6h11a9.4 9.4 0 0 1-4.1 6.2v5h6.6c3.9-3.6 6.1-8.8 6.1-14.8Z"/><path fill="#FF3D00" d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.6-5c-1.8 1.2-4 1.9-6.9 1.9-5.3 0-9.8-3.6-11.4-8.4H5.8v5.1A20 20 0 0 0 24 44Z"/><path fill="#4CAF50" d="M12.6 27.7a12 12 0 0 1 0-7.4v-5.1H5.8a20 20 0 0 0 0 17.6l6.8-5.1Z"/><path fill="#1976D2" d="M24 12c3 0 5.7 1 7.8 3.1l5.8-5.8C34.1 6 29.5 4 24 4A20 20 0 0 0 5.8 15.2l6.8 5.1C14.2 15.6 18.7 12 24 12Z"/></svg>
+          Continue with Google
+        </button>
+        <div class="gate-links"><button class="gate-link" id="authModeSwitch" type="button">Create an account</button><button class="gate-link" id="forgotPasswordButton" type="button">Forgot password?</button></div>
+        <p class="gate-status" id="authStatus" role="status"></p>
+      </section>
+      <section id="termsPanel" class="gate-panel terms-panel" aria-labelledby="termsTitle" aria-describedby="termsStatus" hidden>
+        <p class="gate-eyebrow">One more step</p>
+        <h1 id="termsTitle">Terms of Service</h1>
+        <div class="terms-scroll" tabindex="0" aria-label="Terms of Service text">
+          <p><strong>Effective date: November 20, 2026</strong></p>
+          <h2>1. About Jynex</h2><p>Jynex provides a search interface. Web results are supplied by Purili and image results by Wikimedia Commons. Those services and the websites they link to are operated by third parties.</p>
+          <h2>2. Your account</h2><p>You must sign in with an email and password to use Jynex. Keep your password secure and tell the project maintainer if you believe someone has accessed your account without permission.</p>
+          <h2>3. Acceptable use</h2><p>Use Jynex lawfully. Do not interfere with the service, attempt unauthorized access, or use it to distribute harmful or unlawful material. Follow the terms and policies of third-party services and websites you visit.</p>
+          <h2>4. Search results and images</h2><p>Search results, descriptions, and images may be incomplete, inaccurate, unavailable, or changed by their providers. Jynex does not control linked websites. Image reuse terms vary; check the license and attribution details on each Wikimedia Commons file page before reusing an image.</p>
+          <h2>5. Availability</h2><p>Jynex and its third-party services are provided on an “as available” basis. Features may change or stop working. Nothing in these terms excludes rights that cannot be excluded under applicable law.</p>
+          <h2>6. Data and privacy</h2><p>Firebase Authentication processes your email address and account credentials to sign you in. Jynex stores your acceptance of these terms with your account. Recent searches, saved links, and theme preference are stored in this browser. Search requests are sent to Purili; image searches are sent to Wikimedia Commons.</p>
+          <h2>7. Changes and contact</h2><p>These terms may be updated when the service changes. If a material update requires new acceptance, Jynex will ask you to accept the updated version before continuing. Contact the Jynex maintainer through the repository where you accessed the service.</p>
+        </div>
+        <label class="terms-consent"><input id="tosAccepted" type="checkbox"><span>I have read and agree to the Terms of Service.</span></label>
+        <div class="terms-actions"><button class="gate-secondary" id="termsSignOut" type="button">Sign out</button><button class="gate-primary" id="acceptTermsButton" type="button" disabled>Accept and continue</button></div>
+        <p class="gate-status" id="termsStatus" role="status"></p>
+      </section>
+    </section>
+  </main>
+  <noscript><p class="noscript-message">Jynex requires JavaScript and Firebase Authentication to sign in.</p></noscript>
+  <div id="appShell" hidden>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="Jynex home">Jynex<span>.</span></a>
+    <nav class="header-actions" aria-label="Site controls">
+      <button class="icon-button" id="libraryButton" type="button" aria-label="Open recent and saved searches" title="Library">▤ <span>Library</span></button>
+      <button class="icon-button theme-button" id="themeButton" type="button" aria-label="Switch to dark mode" title="Switch theme"><span id="themeIcon" aria-hidden="true">☾</span></button>
+      <button class="icon-button account-button" id="accountButton" type="button" aria-haspopup="dialog" aria-controls="accountDialog">Account</button>
+    </nav>
+  </header>
+
+  <main class="app-main" id="appMain">
+    <section class="hero" id="hero" aria-labelledby="heroTitle">
+      <p class="eyebrow"><span class="eyebrow-dot"></span> Your window to the web</p>
+      <h1 id="heroTitle">Search beyond<br><span>the obvious.</span></h1>
+      <p class="hero-copy">Find useful pages and explore images wherever ideas lead.</p>
+    </section>
+
+    <section class="search-area" aria-label="Search controls">
+      <form class="search-form" id="searchForm" role="search" autocomplete="off">
+        <span class="search-symbol" aria-hidden="true">⌕</span>
+        <label class="sr-only" for="query">Search the web</label>
+        <input id="query" name="q" type="search" placeholder="Search the web" autocomplete="off" aria-autocomplete="list" aria-controls="suggestions" aria-expanded="false" required>
+        <button class="clear-button" id="clearButton" type="button" aria-label="Clear search" title="Clear search" hidden>×</button>
+        <button class="search-button" id="searchButton" type="submit"><span>Search</span><span aria-hidden="true">↵</span></button>
+        <div class="suggestions" id="suggestions" role="listbox" aria-label="Search suggestions" hidden></div>
+      </form>
+
+      <div class="filter-row">
+        <details class="filter-details" id="filterDetails">
+          <summary class="filter-trigger"><span aria-hidden="true">☷</span> Filters <span class="filter-count" id="filterCount" hidden>0</span></summary>
+          <div class="filter-panel">
+            <div class="filter-heading"><div><strong>Refine your search</strong><p>Filters use supported search operators.</p></div><button class="text-button" id="clearFiltersButton" type="button">Clear</button></div>
+            <div class="filter-grid">
+              <label class="filter-field"><span>Exact phrase</span><input id="phraseFilter" type="text" placeholder="e.g. climate change"></label>
+              <label class="filter-field"><span>Only this site</span><input id="siteFilter" type="text" placeholder="example.com" inputmode="url"></label>
+              <label class="filter-field"><span>File type</span><select id="filetypeFilter"><option value="">Any file</option><option value="pdf">PDF</option><option value="docx">Word document</option><option value="pptx">PowerPoint</option><option value="xlsx">Excel spreadsheet</option><option value="csv">CSV</option></select></label>
+            </div>
+            <p class="filter-hint">You can also type search operators directly, like <code>site:example.com</code>.</p>
+            <button class="apply-filters-button" id="applyFiltersButton" type="button">Apply filters</button>
+          </div>
+        </details>
+        <span class="filter-summary" id="filterSummary"></span>
+        <span class="keyboard-hint"><kbd>/</kbd> or <kbd>⌘</kbd><kbd>K</kbd> to search</span>
+      </div>
+    </section>
+
+    <section class="search-workspace" id="searchWorkspace" hidden aria-label="Search results">
+      <div class="tabs-wrap">
+        <div class="result-tabs" role="tablist" aria-label="Result type">
+          <button class="result-tab is-active" id="webTab" type="button" role="tab" aria-selected="true" data-tab="web">Web</button>
+          <button class="result-tab" id="imagesTab" type="button" role="tab" aria-selected="false" data-tab="images">Images</button>
+        </div>
+        <span class="provider-label"><span class="provider-dot"></span> Independent web index</span>
+      </div>
+      <div class="correction-message" id="correctionMessage" hidden></div>
+      <section class="answer-slot" id="answerSlot" aria-live="polite" hidden></section>
+      <div class="results-header" id="resultsHeader"></div>
+      <section class="results-list" id="resultsList" aria-live="polite"></section>
+      <nav class="pagination" id="pagination" aria-label="Search result pages" hidden></nav>
+    </section>
+
+    <section class="welcome-extras" id="welcomeExtras" aria-label="Search shortcuts">
+      <p class="welcome-label">Start exploring</p>
+      <div class="quick-searches">
+        <button type="button" class="quick-chip" data-query="how solar panels work"><span>✦</span> How solar panels work</button>
+        <button type="button" class="quick-chip" data-query="best places to visit in Japan"><span>⌖</span> Places to visit in Japan</button>
+        <button type="button" class="quick-chip" data-query="latest space discoveries"><span>◌</span> Space discoveries</button>
+      </div>
+      <p class="privacy-note">Searches run through Purili’s independent web index. Your saved items stay in this browser.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer"><span>Jynex Search</span><span>Results provided by <a href="https://puri.li/" target="_blank" rel="noopener noreferrer">Purili</a></span><span>Built for curiosity <span class="footer-spark">✦</span></span></footer>
+
+  <dialog class="library-dialog" id="libraryDialog" aria-labelledby="libraryTitle">
+    <div class="dialog-topline"><div><p class="eyebrow dialog-eyebrow">Your Jynex</p><h2 id="libraryTitle">Search library</h2></div><button class="icon-button close-dialog" id="closeLibraryButton" type="button" aria-label="Close library">×</button></div>
+    <div class="library-tabs" role="tablist" aria-label="Library contents"><button class="library-tab is-active" type="button" role="tab" aria-selected="true" data-library-tab="recent">Recent</button><button class="library-tab" type="button" role="tab" aria-selected="false" data-library-tab="saved">Saved <span id="savedCount">0</span></button></div>
+    <div class="library-content" id="libraryContent"></div>
+  </dialog>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
+  <dialog class="library-dialog account-dialog" id="accountDialog" aria-labelledby="accountTitle">
+    <div class="dialog-topline"><div><p class="eyebrow dialog-eyebrow">Signed in</p><h2 id="accountTitle">Your account</h2></div><button class="icon-button close-dialog" id="closeAccountButton" type="button" aria-label="Close account">×</button></div>
+    <p class="account-email-label">Email address</p><p class="account-email" id="accountEmail"></p>
+    <form id="changePasswordForm" class="password-form">
+      <h3>Change password</h3>
+      <label class="gate-field">Current password<input id="currentPassword" type="password" autocomplete="current-password" required></label>
+      <label class="gate-field">New password<input id="newPassword" type="password" autocomplete="new-password" minlength="6" required></label>
+      <label class="gate-field">Confirm new password<input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="6" required></label>
+      <button class="gate-secondary" type="submit">Update password</button>
+    </form>
+    <p class="google-password-note" id="googlePasswordNote" hidden>This account uses Google sign-in. Manage its password in your Google Account.</p>
+    <p class="gate-status" id="accountStatus" role="status"></p>
+    <button class="account-signout" id="signOutButton" type="button">Sign out</button>
+  </dialog>
+  </div>
+  <!-- JYNEX_SCRIPT -->
+</body>
+</html>
