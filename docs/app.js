@@ -6,13 +6,13 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   "use strict";
 
   const firebaseConfig = {
-    apiKey: "AIzaSyAlheX_LCPjp6zOYaMga-zVztGQe4M05k",
-    authDomain: "jynex-search.firebaseapp.com",
-    projectId: "jynex-search",
-    storageBucket: "jynex-search.firebasestorage.app",
-    messagingSenderId: "156299533364",
-    appId: "1:156299533364:web:dcb89b81a690bf2308be61",
-    measurementId: "G-VZSZ5WTFKK"
+    apiKey: "AIzaSyCwNxpL1Ow7nFtJMMRsDXFcTiH_hNIXBG0",
+    authDomain: "jynex-websearch.firebaseapp.com",
+    projectId: "jynex-websearch",
+    storageBucket: "jynex-websearch.firebasestorage.app",
+    messagingSenderId: "996846184302",
+    appId: "1:996846184302:web:65d887c6163c50d2c8c37f",
+    measurementId: "G-472YD842PM"
   };
   const firebaseApp = initializeApp(firebaseConfig);
   const auth = getAuth(firebaseApp);
