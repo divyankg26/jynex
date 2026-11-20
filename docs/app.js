@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
-import { EmailAuthProvider, GoogleAuthProvider, createUserWithEmailAndPassword, getAuth, onAuthStateChanged, reauthenticateWithCredential, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+import { GoogleAuthProvider, createUserWithEmailAndPassword, getAuth, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
 import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
 (() => {
@@ -17,7 +17,9 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   const firebaseApp = initializeApp(firebaseConfig);
   const auth = getAuth(firebaseApp);
   const db = getFirestore(firebaseApp);
+  // Keep this version stable so an existing acceptance remains valid after reloads.
   const TERMS_VERSION = "2026-11-20";
+  const ACCEPTED_TERMS_VERSIONS = new Set([TERMS_VERSION, "2026-11-20-v3"]);
   const API = "https://puri.li";
   const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
   const STORAGE = { theme: "jynex-theme", recent: "jynex-recent", saved: "jynex-saved" };
@@ -29,14 +31,14 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const ui = {
     body: document.body,
-    appShell: $("#appShell"), accessGate: $("#accessGate"), authPanel: $("#authPanel"), termsPanel: $("#termsPanel"),
+    appShell: $("#appShell"), accessGate: $("#accessGate"), authLoadingPanel: $("#authLoadingPanel"), authPanel: $("#authPanel"), verificationPanel: $("#verificationPanel"), termsPanel: $("#termsPanel"),
     authForm: $("#authForm"), authEmail: $("#authEmail"), authPassword: $("#authPassword"), authConfirmPassword: $("#authConfirmPassword"),
     authSubmit: $("#authSubmit"), googleSignInButton: $("#googleSignInButton"), authModeSwitch: $("#authModeSwitch"), confirmPasswordField: $("#confirmPasswordField"),
     forgotPasswordButton: $("#forgotPasswordButton"), authStatus: $("#authStatus"), tosAccepted: $("#tosAccepted"),
-    acceptTermsButton: $("#acceptTermsButton"), termsStatus: $("#termsStatus"), termsSignOut: $("#termsSignOut"),
+    verificationEmail: $("#verificationEmail"), verificationStatus: $("#verificationStatus"), resendVerificationButton: $("#resendVerificationButton"), checkVerificationButton: $("#checkVerificationButton"), verificationSignOut: $("#verificationSignOut"),
+    termsScroll: $(".terms-scroll"), termsConsent: $(".terms-consent"), acceptTermsButton: $("#acceptTermsButton"), retryTermsCheckButton: $("#retryTermsCheckButton"), termsStatus: $("#termsStatus"), termsSignOut: $("#termsSignOut"),
     accountButton: $("#accountButton"), accountDialog: $("#accountDialog"), accountEmail: $("#accountEmail"),
-    changePasswordForm: $("#changePasswordForm"), googlePasswordNote: $("#googlePasswordNote"), currentPassword: $("#currentPassword"), newPassword: $("#newPassword"),
-    confirmNewPassword: $("#confirmNewPassword"), accountStatus: $("#accountStatus"), signOutButton: $("#signOutButton"),
+    changePasswordButton: $("#changePasswordButton"), googlePasswordNote: $("#googlePasswordNote"), accountStatus: $("#accountStatus"), clearHistoryButton: $("#clearHistoryButton"), signOutButton: $("#signOutButton"),
     form: $("#searchForm"), input: $("#query"), searchButton: $("#searchButton"), clearButton: $("#clearButton"),
     suggestions: $("#suggestions"), searchArea: $(".search-area"), workspace: $("#searchWorkspace"), welcome: $("#welcomeExtras"),
     resultsHeader: $("#resultsHeader"), resultsList: $("#resultsList"), pagination: $("#pagination"),
@@ -58,6 +60,8 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   let authMode = "signin";
   let signedInUser = null;
   let storageUserId = null;
+  let authGateSequence = 0;
+  const verificationEmailRequests = new Map();
 
   function readStorage(key, fallback) {
     try {
@@ -101,6 +105,18 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     return node;
   }
 
+  function formatDate(timestamp) {
+    const date = new Date(Number(timestamp));
+    if (!Number.isFinite(date.getTime())) return "Recently";
+    const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysAgo = Math.round((today - day) / 86_400_000);
+    if (daysAgo === 0) return "Today";
+    if (daysAgo === 1) return "Yesterday";
+    return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
+  }
+
   function setStatus(node, message = "", isError = false) {
     node.textContent = message;
     node.dataset.error = String(isError);
@@ -116,9 +132,12 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
       "auth/popup-blocked": "Your browser blocked the Google sign-in popup. Allow popups for this site and try again.",
       "auth/account-exists-with-different-credential": "An account already exists with this email. Sign in using its existing method first.",
       "auth/too-many-requests": "Too many attempts. Wait a little and try again.",
+      "auth/quota-exceeded": "Email sending is temporarily limited for this project. Try again later.",
       "auth/network-request-failed": "Could not reach Firebase. Check your connection and try again.",
       "auth/operation-not-allowed": "Email and password sign-in is not enabled in Firebase Authentication.",
-      "auth/requires-recent-login": "Sign in again before changing your password.",
+      "auth/unauthorized-continue-uri": "This website address is not authorized for Firebase email links. Add the site domain in Firebase Authentication settings.",
+      "auth/unauthorized-domain": "This website domain is not authorized in Firebase Authentication settings.",
+      "auth/requires-recent-login": "Sign in again before continuing.",
       "auth/user-not-found": "No account was found for that email.",
       "auth/wrong-password": "The current password is incorrect."
     };
@@ -130,19 +149,40 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     storageUserId = null;
     ui.appShell.hidden = true;
     ui.accessGate.hidden = false;
+    ui.authLoadingPanel.hidden = true;
     ui.authPanel.hidden = false;
+    ui.verificationPanel.hidden = true;
     ui.termsPanel.hidden = true;
     if (message) setStatus(ui.authStatus, message, true);
   }
 
-  function showTermsGate(user, message = "") {
+  function showVerificationGate(user, message = "") {
+    signedInUser = user;
+    storageUserId = null;
+    ui.appShell.hidden = true;
+    ui.accessGate.hidden = false;
+    ui.authLoadingPanel.hidden = true;
+    ui.authPanel.hidden = true;
+    ui.verificationPanel.hidden = false;
+    ui.termsPanel.hidden = true;
+    ui.verificationEmail.textContent = user.email || "your email address";
+    setStatus(ui.verificationStatus, message);
+  }
+
+  function showTermsGate(user, message = "", readFailed = false) {
     signedInUser = user;
     ui.appShell.hidden = true;
     ui.accessGate.hidden = false;
+    ui.authLoadingPanel.hidden = true;
     ui.authPanel.hidden = true;
+    ui.verificationPanel.hidden = true;
     ui.termsPanel.hidden = false;
     ui.tosAccepted.checked = false;
     ui.acceptTermsButton.disabled = true;
+    ui.termsScroll.hidden = readFailed;
+    ui.termsConsent.hidden = readFailed;
+    ui.acceptTermsButton.hidden = readFailed;
+    ui.retryTermsCheckButton.hidden = !readFailed;
     setStatus(ui.termsStatus, message, Boolean(message));
   }
 
@@ -151,11 +191,31 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     storageUserId = user.uid;
     ui.accountEmail.textContent = user.email || "Email unavailable";
     ui.accessGate.hidden = true;
+    ui.authLoadingPanel.hidden = true;
     ui.appShell.hidden = false;
     const hasPassword = user.providerData.some(provider => provider.providerId === "password");
-    ui.changePasswordForm.hidden = !hasPassword;
+    ui.changePasswordButton.hidden = !hasPassword;
     ui.googlePasswordNote.hidden = hasPassword;
     updateSavedCount();
+    renderHomeRecent();
+  }
+
+  async function requestVerificationEmail(user, force = false) {
+    if (!user?.uid) throw new Error("Sign in again to request a verification email.");
+    const existingRequest = verificationEmailRequests.get(user.uid);
+    if (existingRequest) return existingRequest;
+
+    const cooldownKey = `jynex-verification-sent:${user.uid}`;
+    let lastSentAt = 0;
+    try { lastSentAt = Number(localStorage.getItem(cooldownKey)) || 0; } catch { /* Continue without a resend cooldown. */ }
+    if (!force && Date.now() - lastSentAt < 120_000) return "recent";
+
+    const request = sendEmailVerification(user).then(() => {
+      try { localStorage.setItem(cooldownKey, String(Date.now())); } catch { /* The email was still requested. */ }
+      return "sent";
+    }).finally(() => verificationEmailRequests.delete(user.uid));
+    verificationEmailRequests.set(user.uid, request);
+    return request;
   }
 
   function setAuthMode(mode) {
@@ -175,33 +235,61 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     ui.acceptTermsButton.disabled = true;
     setStatus(ui.termsStatus, "Saving your acceptance…");
     try {
-      await setDoc(doc(db, "users", signedInUser.uid), {
-        email: signedInUser.email || "",
-        termsAccepted: true,
+      await setDoc(doc(db, "userConsents", signedInUser.uid), {
         termsVersion: TERMS_VERSION,
-        termsAcceptedAt: serverTimestamp()
+        acceptedAt: serverTimestamp()
       });
       showApp(signedInUser);
-    } catch (error) {
+    } catch {
       ui.acceptTermsButton.disabled = false;
-      setStatus(ui.termsStatus, `Could not save your acceptance. Check that Cloud Firestore is enabled and its security rules are deployed. ${authMessage(error)}`, true);
+      setStatus(ui.termsStatus, "Jynex could not save your acceptance to your account. Check that Cloud Firestore is enabled and its security rules are published, then try again.", true);
     }
   }
 
-  onAuthStateChanged(auth, async user => {
+  async function routeAuthenticatedUser(user) {
+    const sequence = ++authGateSequence;
     if (!user) {
       showAuthGate();
       return;
     }
-    showTermsGate(user, "Checking your account…");
     try {
-      const profile = await getDoc(doc(db, "users", user.uid));
-      if (profile.exists() && profile.data().termsAccepted === true && profile.data().termsVersion === TERMS_VERSION) showApp(user);
-      else showTermsGate(user);
+      await user.reload();
+      const refreshedUser = auth.currentUser || user;
+      if (sequence !== authGateSequence || auth.currentUser?.uid !== user.uid) return;
+      signedInUser = refreshedUser;
+      const isGoogleUser = refreshedUser.providerData.some(provider => provider.providerId === "google.com");
+      if (!refreshedUser.emailVerified && !isGoogleUser) {
+        showVerificationGate(refreshedUser, "Sending a verification link…");
+        const delivery = await requestVerificationEmail(refreshedUser);
+        if (sequence !== authGateSequence) return;
+        setStatus(ui.verificationStatus, delivery === "sent"
+          ? `A verification link was sent to ${refreshedUser.email}. Check your inbox and spam folder.`
+          : `A verification link was recently sent to ${refreshedUser.email}. Check your inbox and spam folder.`);
+        return;
+      }
+      await refreshedUser.getIdToken(true);
+      storageUserId = refreshedUser.uid;
+      const consent = await getDoc(doc(db, "userConsents", refreshedUser.uid));
+      if (sequence !== authGateSequence || auth.currentUser?.uid !== refreshedUser.uid) return;
+      const acceptance = consent.exists() ? consent.data() : null;
+      if (ACCEPTED_TERMS_VERSIONS.has(acceptance?.termsVersion)) {
+        showApp(refreshedUser);
+        return;
+      }
+      // Older Jynex builds saved acceptance at users/{uid}; honor it to avoid asking again.
+      const legacyConsent = await getDoc(doc(db, "users", refreshedUser.uid));
+      if (sequence !== authGateSequence || auth.currentUser?.uid !== refreshedUser.uid) return;
+      if (legacyConsent.exists() && legacyConsent.data().termsAccepted === true && ACCEPTED_TERMS_VERSIONS.has(legacyConsent.data().termsVersion)) showApp(refreshedUser);
+      else showTermsGate(refreshedUser);
     } catch (error) {
-      showTermsGate(user, `Could not verify your Terms acceptance. Check that Cloud Firestore is enabled and its security rules are deployed. ${authMessage(error)}`);
+      if (sequence !== authGateSequence) return;
+      const isGoogleUser = user.providerData.some(provider => provider.providerId === "google.com");
+      if (!user.emailVerified && !isGoogleUser) showVerificationGate(user, `We couldn’t confirm your email yet. ${authMessage(error)}`);
+      else showTermsGate(user, `Could not check your Terms acceptance. ${authMessage(error)}`, true);
     }
-  }, error => showAuthGate(authMessage(error)));
+  }
+
+  onAuthStateChanged(auth, routeAuthenticatedUser, error => showAuthGate(authMessage(error)));
 
   function safeWebUrl(value) {
     try {
@@ -277,6 +365,36 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     return Array.isArray(items) ? items.filter(item => item && typeof item.q === "string") : [];
   }
 
+  function renderHomeRecent() {
+    const container = $("#homeRecentSearches");
+    if (!container) return;
+    const records = getRecent().slice(0, 5);
+    container.replaceChildren();
+    if (!records.length) {
+      container.append(element("p", "home-recent-empty", "Your recent searches will appear here."));
+      return;
+    }
+    records.forEach(record => {
+      const row = element("div", "home-recent-row");
+      const reopen = element("button", "home-recent-query");
+      reopen.type = "button";
+      reopen.setAttribute("aria-label", `Search again for ${record.q}`);
+      reopen.append(element("span", "recent-search-icon", "⌕"));
+      const copy = element("span", "home-recent-copy");
+      copy.append(element("strong", "", record.q));
+      copy.append(element("small", "", formatDate(record.searchedAt)));
+      reopen.append(copy, element("span", "home-recent-arrow", "↗"));
+      reopen.addEventListener("click", () => useRecent(record));
+      const remove = element("button", "home-recent-remove", "×");
+      remove.type = "button";
+      remove.title = `Remove “${record.q}” from history`;
+      remove.setAttribute("aria-label", `Remove “${record.q}” from search history`);
+      remove.addEventListener("click", () => removeRecentSearch(record));
+      row.append(reopen, remove);
+      container.append(row);
+    });
+  }
+
   function getSaved() {
     const items = readStorage(STORAGE.saved, []);
     return Array.isArray(items) ? items.filter(item => item && safeWebUrl(item.url)) : [];
@@ -288,6 +406,14 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     const items = getRecent().filter(item => recentKey(item) !== recentKey(record));
     items.unshift({ ...record, searchedAt: Date.now() });
     writeStorage(STORAGE.recent, items.slice(0, MAX_RECENT));
+    renderHomeRecent();
+  }
+
+  function removeRecentSearch(record) {
+    writeStorage(STORAGE.recent, getRecent().filter(item => recentKey(item) !== recentKey(record)));
+    renderHomeRecent();
+    if (ui.libraryDialog.open && libraryTab === "recent") renderLibrary();
+    if (!ui.suggestions.hidden && !ui.input.value.trim()) showRecentSuggestions();
   }
 
   function isSaved(url) { return getSaved().some(item => item.url === url); }
@@ -352,7 +478,23 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
       button.append(icon, document.createTextNode(item.label));
       button.addEventListener("pointerdown", event => event.preventDefault());
       button.addEventListener("click", () => chooseSuggestion(index));
-      ui.suggestions.append(button);
+      if (item.kind === "recent" && item.record) {
+        const row = element("div", "suggestion-row");
+        row.setAttribute("role", "presentation");
+        const remove = element("button", "suggestion-delete", "×");
+        remove.type = "button";
+        remove.title = `Remove “${item.record.q}” from search history`;
+        remove.setAttribute("aria-label", `Remove “${item.record.q}” from search history`);
+        remove.addEventListener("pointerdown", event => event.preventDefault());
+        remove.addEventListener("click", event => {
+          event.stopPropagation();
+          removeRecentSearch(item.record);
+        });
+        row.append(button, remove);
+        ui.suggestions.append(row);
+      } else {
+        ui.suggestions.append(button);
+      }
     });
     ui.suggestions.hidden = false;
     ui.searchArea.classList.add("suggestions-open");
@@ -835,7 +977,7 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     refreshFilterSummary();
     ui.input.value = record.q;
     startSearch({ base: record.q, filters: { phrase: record.phrase || "", site: record.site || "", filetype: record.filetype || "" }, tab: "web", page: 1, push: true });
-    ui.libraryDialog.close();
+    closeLibrary();
   }
 
   function switchLibraryTab(tab) {
@@ -872,17 +1014,16 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
       row.append(main);
       const remove = element("button", "library-remove", "×");
       remove.type = "button";
-      remove.setAttribute("aria-label", libraryTab === "recent" ? "Remove search from history" : "Remove saved result");
+      remove.title = libraryTab === "recent" ? `Remove “${record.q}” from history` : "Remove saved result";
+      remove.setAttribute("aria-label", libraryTab === "recent" ? `Remove “${record.q}” from search history` : `Remove saved result: ${record.title || record.url}`);
       remove.addEventListener("click", () => {
         if (libraryTab === "recent") {
-          const next = getRecent();
-          next.splice(index, 1);
-          writeStorage(STORAGE.recent, next);
+          removeRecentSearch(record);
         } else {
           writeStorage(STORAGE.saved, getSaved().filter(item => item.url !== record.url));
           updateSavedCount();
         }
-        renderLibrary();
+        if (libraryTab !== "recent") renderLibrary();
         if (!ui.suggestions.hidden && !ui.input.value.trim()) showRecentSuggestions();
       });
       row.append(remove);
@@ -893,7 +1034,24 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   function openLibrary(tab = libraryTab) {
     switchLibraryTab(tab);
     updateSavedCount();
-    if (!ui.libraryDialog.open) ui.libraryDialog.showModal();
+    if (ui.libraryDialog.open) return;
+    try {
+      ui.libraryDialog.showModal();
+    } catch (error) {
+      // Keep the library accessible in browsers that expose <dialog> without showModal().
+      ui.libraryDialog.dataset.openFallback = "true";
+      ui.libraryDialog.setAttribute("open", "");
+      console.error("Could not open the search library as a modal:", error);
+    }
+  }
+
+  function closeLibrary() {
+    if (ui.libraryDialog.dataset.openFallback === "true") {
+      ui.libraryDialog.removeAttribute("open");
+      delete ui.libraryDialog.dataset.openFallback;
+      return;
+    }
+    if (ui.libraryDialog.open) ui.libraryDialog.close();
   }
 
   ui.form.addEventListener("submit", event => {
@@ -920,24 +1078,46 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   [ui.phrase, ui.site, ui.filetype].forEach(control => control.addEventListener("input", refreshFilterSummary));
   $$(".result-tab").forEach(button => button.addEventListener("click", () => setTab(button.dataset.tab)));
   $$(".quick-chip").forEach(button => button.addEventListener("click", () => runQuickSearch(button.dataset.query)));
+  $$(".explore-card").forEach(button => button.addEventListener("click", () => runQuickSearch(button.dataset.query)));
+  $("#homeLibraryButton").addEventListener("click", () => openLibrary("recent"));
+  $("#homeFiltersButton").addEventListener("click", () => {
+    ui.filterDetails.open = true;
+    ui.filterDetails.scrollIntoView({ behavior: "smooth", block: "center" });
+    ui.phrase.focus({ preventScroll: true });
+  });
   ui.themeButton.addEventListener("click", () => setTheme(document.documentElement.classList.contains("dark") ? "light" : "dark"));
   ui.libraryButton.addEventListener("click", () => openLibrary("recent"));
+  $("#appShell .site-header .brand").addEventListener("click", event => {
+    event.preventDefault();
+    resetSearch(false);
+    ui.input.blur();
+    closeSuggestions();
+    closeLibrary();
+    if (ui.accountDialog.open) ui.accountDialog.close();
+    updateUrl(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
   ui.authForm.addEventListener("submit", async event => {
     event.preventDefault();
     const email = ui.authEmail.value.trim();
     const password = ui.authPassword.value;
     setStatus(ui.authStatus, authMode === "signup" ? "Creating your account…" : "Signing in…");
     ui.authSubmit.disabled = true;
+    let createdUser = null;
     try {
       if (authMode === "signup") {
         if (password !== ui.authConfirmPassword.value) throw new Error("Passwords do not match.");
-        await createUserWithEmailAndPassword(auth, email, password);
+        const credential = await createUserWithEmailAndPassword(auth, email, password);
+        createdUser = credential.user;
+        await requestVerificationEmail(createdUser, true);
+        showVerificationGate(createdUser, `A verification link was sent to ${createdUser.email}. Check your inbox and spam folder.`);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
       ui.authForm.reset();
     } catch (error) {
-      setStatus(ui.authStatus, authMessage(error), true);
+      if (createdUser) showVerificationGate(createdUser, `Your account was created, but the verification email could not be sent. ${authMessage(error)} Try Resend verification email below.`);
+      else setStatus(ui.authStatus, authMessage(error), true);
     } finally {
       ui.authSubmit.disabled = false;
     }
@@ -963,13 +1143,46 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     }
     try {
       await sendPasswordResetEmail(auth, email);
-      setStatus(ui.authStatus, "Password reset instructions have been sent if an account exists for that email.");
+      setStatus(ui.authStatus, "If an account uses that address, password reset instructions have been sent. Check your inbox and spam folder.");
     } catch (error) {
       setStatus(ui.authStatus, authMessage(error), true);
     }
   });
+  ui.resendVerificationButton.addEventListener("click", async () => {
+    if (!signedInUser || signedInUser.emailVerified || signedInUser.providerData.some(provider => provider.providerId === "google.com")) return;
+    ui.resendVerificationButton.disabled = true;
+    setStatus(ui.verificationStatus, "Sending verification email…");
+    try {
+      await requestVerificationEmail(signedInUser, true);
+      setStatus(ui.verificationStatus, `A verification link was sent to ${signedInUser.email}. Check your inbox and spam folder.`);
+    } catch (error) {
+      setStatus(ui.verificationStatus, authMessage(error), true);
+    } finally {
+      ui.resendVerificationButton.disabled = false;
+    }
+  });
+  ui.checkVerificationButton.addEventListener("click", async () => {
+    if (!signedInUser) return;
+    ui.checkVerificationButton.disabled = true;
+    setStatus(ui.verificationStatus, "Checking your email verification…");
+    try {
+      await signedInUser.reload();
+      const refreshedUser = auth.currentUser;
+      if (!refreshedUser?.emailVerified) {
+        setStatus(ui.verificationStatus, "We haven’t confirmed your email yet. Open the verification link in your inbox, then try again.", true);
+        return;
+      }
+      await routeAuthenticatedUser(refreshedUser);
+    } catch (error) {
+      setStatus(ui.verificationStatus, authMessage(error), true);
+    } finally {
+      ui.checkVerificationButton.disabled = false;
+    }
+  });
+  ui.verificationSignOut.addEventListener("click", () => signOut(auth).catch(error => setStatus(ui.verificationStatus, authMessage(error), true)));
   ui.tosAccepted.addEventListener("change", () => { ui.acceptTermsButton.disabled = !ui.tosAccepted.checked; });
   ui.acceptTermsButton.addEventListener("click", acceptTerms);
+  ui.retryTermsCheckButton.addEventListener("click", () => routeAuthenticatedUser(signedInUser));
   ui.termsSignOut.addEventListener("click", () => signOut(auth).catch(error => setStatus(ui.termsStatus, authMessage(error), true)));
   ui.accountButton.addEventListener("click", () => {
     setStatus(ui.accountStatus);
@@ -979,31 +1192,36 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   $("#closeAccountButton").addEventListener("click", () => ui.accountDialog.close());
   ui.accountDialog.addEventListener("click", event => { if (event.target === ui.accountDialog) ui.accountDialog.close(); });
   ui.signOutButton.addEventListener("click", () => signOut(auth).then(() => ui.accountDialog.close()).catch(error => setStatus(ui.accountStatus, authMessage(error), true)));
-  ui.changePasswordForm.addEventListener("submit", async event => {
-    event.preventDefault();
-    if (ui.newPassword.value !== ui.confirmNewPassword.value) {
-      setStatus(ui.accountStatus, "The new passwords do not match.", true);
-      return;
-    }
+  ui.changePasswordButton.addEventListener("click", async () => {
+    if (!signedInUser?.email) return;
+    ui.changePasswordButton.disabled = true;
+    setStatus(ui.accountStatus, "Sending password reset email…");
     try {
-      const credential = EmailAuthProvider.credential(signedInUser.email, ui.currentPassword.value);
-      await reauthenticateWithCredential(signedInUser, credential);
-      await updatePassword(signedInUser, ui.newPassword.value);
-      ui.changePasswordForm.reset();
-      setStatus(ui.accountStatus, "Password updated.");
+      await sendPasswordResetEmail(auth, signedInUser.email);
+      setStatus(ui.accountStatus, `A password reset email was sent to ${signedInUser.email}. Check your inbox and spam folder.`);
     } catch (error) {
       setStatus(ui.accountStatus, authMessage(error), true);
+    } finally {
+      ui.changePasswordButton.disabled = false;
     }
   });
-  $("#closeLibraryButton").addEventListener("click", () => ui.libraryDialog.close());
+  ui.clearHistoryButton.addEventListener("click", () => {
+    writeStorage(STORAGE.recent, []);
+    renderHomeRecent();
+    if (ui.libraryDialog.open && libraryTab === "recent") renderLibrary();
+    if (!ui.suggestions.hidden && !ui.input.value.trim()) showRecentSuggestions();
+    toast("Search history cleared.");
+  });
+  $("#closeLibraryButton").addEventListener("click", closeLibrary);
   $$(".library-tab").forEach(button => button.addEventListener("click", () => switchLibraryTab(button.dataset.libraryTab)));
-  ui.libraryDialog.addEventListener("click", event => { if (event.target === ui.libraryDialog) ui.libraryDialog.close(); });
+  ui.libraryDialog.addEventListener("click", event => { if (event.target === ui.libraryDialog) closeLibrary(); });
   document.addEventListener("keydown", event => {
     const target = event.target;
     const isTyping = target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
     if (event.key === "Escape") {
       if (!ui.suggestions.hidden) closeSuggestions();
       if (ui.filterDetails.open && !isTyping) ui.filterDetails.open = false;
+      if (ui.libraryDialog.dataset.openFallback === "true") closeLibrary();
     }
     if (!isTyping && (event.key === "/" || ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k"))) {
       event.preventDefault();

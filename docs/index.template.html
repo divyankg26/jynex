@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f7fb">
+  <meta name="theme-color" content="#fff7f8">
   <meta name="description" content="Search the web with Jynex.">
   <title>Jynex — Search the web</title>
   <link rel="icon" href="./favicon.png" type="image/png">
@@ -14,7 +14,13 @@
   <main class="access-gate" id="accessGate" aria-live="polite">
     <section class="access-card" aria-labelledby="accessTitle">
       <a class="brand access-brand" href="./" aria-label="Jynex home">Jynex<span>.</span></a>
-      <section id="authPanel" class="gate-panel" aria-describedby="authStatus">
+      <section id="authLoadingPanel" class="gate-panel auth-loading-panel" aria-live="polite">
+        <p class="gate-eyebrow">Welcome back</p>
+        <h1>Restoring your session</h1>
+        <span class="auth-loading-indicator" aria-hidden="true"></span>
+        <p class="gate-copy">Checking your account…</p>
+      </section>
+      <section id="authPanel" class="gate-panel" aria-describedby="authStatus" hidden>
         <p class="gate-eyebrow">Search starts here</p>
         <h1 id="accessTitle">Welcome to Jynex</h1>
         <p class="gate-copy">Create an account or sign in to continue.</p>
@@ -32,21 +38,31 @@
         <div class="gate-links"><button class="gate-link" id="authModeSwitch" type="button">Create an account</button><button class="gate-link" id="forgotPasswordButton" type="button">Forgot password?</button></div>
         <p class="gate-status" id="authStatus" role="status"></p>
       </section>
+      <section id="verificationPanel" class="gate-panel verification-panel" aria-labelledby="verificationTitle" aria-describedby="verificationStatus" hidden>
+        <p class="gate-eyebrow">Verify your email</p>
+        <h1 id="verificationTitle">Check your inbox</h1>
+        <p class="gate-copy">We sent a verification link to <strong id="verificationEmail"></strong>. Verify your address before using Jynex.</p>
+        <button class="gate-primary" id="checkVerificationButton" type="button">I’ve verified my email</button>
+        <button class="gate-secondary verification-resend" id="resendVerificationButton" type="button">Resend verification email</button>
+        <p class="gate-status" id="verificationStatus" role="status"></p>
+        <div class="gate-links"><button class="gate-link" id="verificationSignOut" type="button">Sign out</button></div>
+      </section>
       <section id="termsPanel" class="gate-panel terms-panel" aria-labelledby="termsTitle" aria-describedby="termsStatus" hidden>
         <p class="gate-eyebrow">One more step</p>
         <h1 id="termsTitle">Terms of Service</h1>
         <div class="terms-scroll" tabindex="0" aria-label="Terms of Service text">
           <p><strong>Effective date: November 20, 2026</strong></p>
           <h2>1. About Jynex</h2><p>Jynex provides a search interface. Web results are supplied by Purili and image results by Wikimedia Commons. Those services and the websites they link to are operated by third parties.</p>
-          <h2>2. Your account</h2><p>You must sign in with an email and password to use Jynex. Keep your password secure and tell the project maintainer if you believe someone has accessed your account without permission.</p>
+          <h2>2. Your account</h2><p>You must sign in with Google or with an email address and password to use Jynex. Keep your sign-in details secure and tell the project maintainer if you believe someone has accessed your account without permission.</p>
           <h2>3. Acceptable use</h2><p>Use Jynex lawfully. Do not interfere with the service, attempt unauthorized access, or use it to distribute harmful or unlawful material. Follow the terms and policies of third-party services and websites you visit.</p>
           <h2>4. Search results and images</h2><p>Search results, descriptions, and images may be incomplete, inaccurate, unavailable, or changed by their providers. Jynex does not control linked websites. Image reuse terms vary; check the license and attribution details on each Wikimedia Commons file page before reusing an image.</p>
           <h2>5. Availability</h2><p>Jynex and its third-party services are provided on an “as available” basis. Features may change or stop working. Nothing in these terms excludes rights that cannot be excluded under applicable law.</p>
-          <h2>6. Data and privacy</h2><p>Firebase Authentication processes your email address and account credentials to sign you in. Jynex stores your acceptance of these terms with your account. Recent searches, saved links, and theme preference are stored in this browser. Search requests are sent to Purili; image searches are sent to Wikimedia Commons.</p>
+          <h2>6. Data and privacy</h2><p>Firebase Authentication processes your email address and account credentials to sign you in. Your acceptance of these terms is saved with your Firebase account and checked before the app opens. Recent searches, saved links, and theme preference are stored in this browser. Search requests are sent to Purili; image searches are sent to Wikimedia Commons.</p>
           <h2>7. Changes and contact</h2><p>These terms may be updated when the service changes. If a material update requires new acceptance, Jynex will ask you to accept the updated version before continuing. Contact the Jynex maintainer through the repository where you accessed the service.</p>
         </div>
         <label class="terms-consent"><input id="tosAccepted" type="checkbox"><span>I have read and agree to the Terms of Service.</span></label>
         <div class="terms-actions"><button class="gate-secondary" id="termsSignOut" type="button">Sign out</button><button class="gate-primary" id="acceptTermsButton" type="button" disabled>Accept and continue</button></div>
+        <button class="gate-secondary terms-retry" id="retryTermsCheckButton" type="button" hidden>Retry account check</button>
         <p class="gate-status" id="termsStatus" role="status"></p>
       </section>
     </section>
@@ -114,13 +130,33 @@
     </section>
 
     <section class="welcome-extras" id="welcomeExtras" aria-label="Search shortcuts">
-      <p class="welcome-label">Start exploring</p>
-      <div class="quick-searches">
-        <button type="button" class="quick-chip" data-query="how solar panels work"><span>✦</span> How solar panels work</button>
-        <button type="button" class="quick-chip" data-query="best places to visit in Japan"><span>⌖</span> Places to visit in Japan</button>
-        <button type="button" class="quick-chip" data-query="latest space discoveries"><span>◌</span> Space discoveries</button>
+      <div class="startpage-heading">
+        <div><p class="welcome-label">Your web, at a glance</p><h2>Where will curiosity take you?</h2><p>Pick up where you left off or explore a new corner of the web.</p></div>
+        <span class="startpage-spark" aria-hidden="true">✦</span>
       </div>
-      <p class="privacy-note">Searches run through Purili’s independent web index. Your saved items stay in this browser.</p>
+      <section class="startpage-section" aria-labelledby="exploreTitle">
+        <div class="startpage-section-heading"><div><h3 id="exploreTitle">Explore something new</h3><p>Ideas to get your next search started</p></div></div>
+        <div class="explore-grid">
+          <button class="explore-card explore-science" type="button" data-query="new discoveries in science"><span class="explore-icon">✧</span><span class="explore-card-copy"><strong>Science &amp; space</strong><small>Discover what’s new out there</small></span><span class="explore-arrow">↗</span></button>
+          <button class="explore-card explore-travel" type="button" data-query="beautiful places to visit around the world"><span class="explore-icon">⌖</span><span class="explore-card-copy"><strong>Places &amp; travel</strong><small>Find somewhere inspiring</small></span><span class="explore-arrow">↗</span></button>
+          <button class="explore-card explore-learning" type="button" data-query="learn a new skill online"><span class="explore-icon">▤</span><span class="explore-card-copy"><strong>Learn something</strong><small>Follow a question further</small></span><span class="explore-arrow">↗</span></button>
+          <button class="explore-card explore-technology" type="button" data-query="useful new technology and tools"><span class="explore-icon">⌘</span><span class="explore-card-copy"><strong>Technology</strong><small>See what people are building</small></span><span class="explore-arrow">↗</span></button>
+        </div>
+      </section>
+      <div class="startpage-columns">
+        <section class="startpage-panel" aria-labelledby="homeRecentTitle">
+          <div class="startpage-section-heading"><div><h3 id="homeRecentTitle">Pick up where you left off</h3><p>Your latest searches on this device</p></div><button class="text-button" id="homeLibraryButton" type="button">View library <span aria-hidden="true">↗</span></button></div>
+          <div class="home-recent-list" id="homeRecentSearches"><p class="home-recent-empty">Your recent searches will appear here.</p></div>
+        </section>
+        <section class="startpage-panel startpage-tip" aria-labelledby="searchTipsTitle">
+          <div class="tip-art" aria-hidden="true"><span class="tip-orbit tip-orbit-one"></span><span class="tip-orbit tip-orbit-two"></span><span class="tip-star">✦</span></div>
+          <p class="welcome-label">A little search tip</p>
+          <h3 id="searchTipsTitle">Get closer to what you mean.</h3>
+          <p>Use Filters to search for an exact phrase, limit results to a website, or find a specific file type.</p>
+          <button class="tip-action" id="homeFiltersButton" type="button">Explore search filters <span aria-hidden="true">→</span></button>
+        </section>
+      </div>
+      <p class="privacy-note">Search results come from an independent web index. Your saved items stay in this browser.</p>
     </section>
   </main>
 
@@ -135,13 +171,16 @@
   <dialog class="library-dialog account-dialog" id="accountDialog" aria-labelledby="accountTitle">
     <div class="dialog-topline"><div><p class="eyebrow dialog-eyebrow">Signed in</p><h2 id="accountTitle">Your account</h2></div><button class="icon-button close-dialog" id="closeAccountButton" type="button" aria-label="Close account">×</button></div>
     <p class="account-email-label">Email address</p><p class="account-email" id="accountEmail"></p>
-    <form id="changePasswordForm" class="password-form">
+    <section class="account-history-section">
+      <h3>Search history</h3>
+      <p>Remove all recent searches saved in this browser for your account.</p>
+      <button class="gate-secondary" id="clearHistoryButton" type="button">Clear all search history</button>
+    </section>
+    <section class="password-reset-section" id="passwordResetSection">
       <h3>Change password</h3>
-      <label class="gate-field">Current password<input id="currentPassword" type="password" autocomplete="current-password" required></label>
-      <label class="gate-field">New password<input id="newPassword" type="password" autocomplete="new-password" minlength="6" required></label>
-      <label class="gate-field">Confirm new password<input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="6" required></label>
-      <button class="gate-secondary" type="submit">Update password</button>
-    </form>
+      <p>We’ll email you a secure link to choose a new password.</p>
+      <button class="gate-secondary" id="changePasswordButton" type="button">Send password reset email</button>
+    </section>
     <p class="google-password-note" id="googlePasswordNote" hidden>This account uses Google sign-in. Manage its password in your Google Account.</p>
     <p class="gate-status" id="accountStatus" role="status"></p>
     <button class="account-signout" id="signOutButton" type="button">Sign out</button>

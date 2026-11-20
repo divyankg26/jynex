@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isVerifiedOwner(userId) {
+      return request.auth != null
+        && request.auth.uid == userId
+        && (request.auth.token.email_verified == true
+          || request.auth.token.firebase.sign_in_provider == 'google.com');
+    }
+
+    match /userConsents/{userId} {
+      allow get: if isVerifiedOwner(userId);
+      allow list: if false;
+
+      allow create, update: if isVerifiedOwner(userId)
+        && request.resource.data.keys().hasAll(['termsVersion', 'acceptedAt'])
+        && request.resource.data.keys().hasOnly(['termsVersion', 'acceptedAt'])
+        && request.resource.data.termsVersion in ['2026-11-20', '2026-11-20-v3']
+        && request.resource.data.acceptedAt == request.time;
+
+      allow delete: if false;
+    }
+
+    // Read-only compatibility for accounts that accepted in an older Jynex build.
+    match /users/{userId} {
+      allow get: if isVerifiedOwner(userId);
+      allow list, create, update, delete: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

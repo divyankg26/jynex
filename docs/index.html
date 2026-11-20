@@ -3,28 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f5f7fb">
+  <meta name="theme-color" content="#fff7f8">
   <meta name="description" content="Search the web with Jynex.">
   <title>Jynex — Search the web</title>
   <link rel="icon" href="./favicon.png" type="image/png">
   <style>
 :root {
   color-scheme: light;
-  --page: #f5f7fb;
+  --page: #fff7f8;
   --surface: #ffffff;
-  --surface-soft: #f9faff;
-  --surface-hover: #f1f4fb;
-  --ink: #1b2437;
-  --ink-soft: #4d5a73;
-  --muted: #8791a5;
-  --line: #e6eaf2;
-  --line-strong: #d9dfeb;
-  --accent: #4a6ff2;
-  --accent-hover: #3459d7;
-  --accent-soft: #eef2ff;
+  --surface-soft: #fffafb;
+  --surface-hover: #fff0f3;
+  --ink: #29151e;
+  --ink-soft: #684653;
+  --muted: #a07e8b;
+  --line: #f0dfe5;
+  --line-strong: #e5cbd4;
+  --accent: #d52b60;
+  --accent-hover: #b71e50;
+  --accent-soft: #ffe8ef;
   --green: #16836b;
   --danger: #c64a5b;
-  --shadow: 0 18px 50px rgba(35, 49, 82, .09);
+  --shadow: 0 22px 60px rgba(117, 28, 62, .12);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
   background: var(--page);
@@ -36,21 +36,21 @@
 
 :root.dark {
   color-scheme: dark;
-  --page: #111522;
-  --surface: #191f2e;
-  --surface-soft: #1d2536;
-  --surface-hover: #242d41;
-  --ink: #edf1fb;
-  --ink-soft: #c4cce0;
-  --muted: #929cb2;
-  --line: #2a3448;
-  --line-strong: #39445b;
-  --accent: #91a8ff;
-  --accent-hover: #b2c1ff;
-  --accent-soft: #242e4c;
+  --page: #180f14;
+  --surface: #24151d;
+  --surface-soft: #2c1923;
+  --surface-hover: #38202c;
+  --ink: #fff0f5;
+  --ink-soft: #dfbac8;
+  --muted: #ad8796;
+  --line: #482a38;
+  --line-strong: #624052;
+  --accent: #ff6b91;
+  --accent-hover: #ff9bb3;
+  --accent-soft: #482334;
   --green: #77d4bb;
   --danger: #ff9dab;
-  --shadow: 0 18px 50px rgba(0, 0, 0, .25);
+  --shadow: 0 22px 60px rgba(0, 0, 0, .34);
 }
 
 * { box-sizing: border-box; }
@@ -68,6 +68,9 @@ button:disabled { cursor: wait; opacity: .6; }
 .access-gate { position: fixed; inset: 0; z-index: 100; padding: 24px; display: grid; place-items: center; overflow: auto; background: radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--accent) 13%, var(--page)), var(--page) 58%); }
 .access-card { width: min(470px, 100%); padding: 34px; border: 1px solid var(--line); border-radius: 25px; background: var(--surface); box-shadow: var(--shadow); animation: card-enter .3s ease-out both; }
 .access-brand { display: inline-block; margin-bottom: 29px; }
+.auth-loading-panel .gate-eyebrow { margin-bottom: 9px; }
+.auth-loading-indicator { width: 30px; height: 30px; margin: 21px 0 0; display: block; border: 3px solid var(--accent-soft); border-top-color: var(--accent); border-radius: 50%; animation: auth-spin .8s linear infinite; }
+.auth-loading-panel .gate-copy { margin: 10px 0 0; }
 .gate-eyebrow { margin: 0 0 8px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
 .gate-panel h1 { margin: 0; font-size: 29px; letter-spacing: -1.1px; }
 .gate-copy { margin: 9px 0 23px; color: var(--muted); font-size: 13px; line-height: 1.55; }
@@ -136,6 +139,10 @@ body.has-search .search-area { width: min(800px, 100%); }
 .suggestion-option { width: 100%; min-height: 42px; padding: 9px 11px; display: flex; align-items: center; gap: 11px; border: 0; border-radius: 10px; background: transparent; color: var(--ink-soft); cursor: pointer; text-align: left; font-size: 13px; }
 .suggestion-option:hover, .suggestion-option[aria-selected="true"] { background: var(--surface-hover); color: var(--ink); }
 .suggestion-option .suggestion-icon { width: 17px; color: var(--muted); text-align: center; }
+.suggestion-row { min-width: 0; display: flex; align-items: center; gap: 3px; border-radius: 12px; }
+.suggestion-row .suggestion-option { min-width: 0; flex: 1; }
+.suggestion-delete { width: 34px; height: 34px; flex: 0 0 34px; display: grid; place-items: center; border: 0; border-radius: 10px; background: transparent; color: var(--muted); cursor: pointer; font-size: 20px; line-height: 1; }
+.suggestion-delete:hover { background: var(--accent-soft); color: var(--danger); }
 
 .filter-row { min-height: 43px; padding: 10px 4px 0; display: flex; align-items: center; gap: 12px; }
 .search-area.suggestions-open .filter-row { visibility: hidden; }
@@ -267,10 +274,12 @@ kbd { min-width: 18px; padding: 2px 4px; border: 1px solid var(--line-strong); b
 .library-item-main small { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; }
 .library-remove { width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; }
 .library-remove:hover { background: var(--surface-hover); color: var(--danger); }
+.library-item .library-remove { flex: 0 0 32px; font-size: 20px; }
 .toast-region { position: fixed; right: 22px; bottom: 22px; z-index: 20; display: grid; gap: 8px; }
 .toast { padding: 11px 15px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); font-size: 12px; animation: toast-in .22s ease-out both; }
 
 @keyframes hero-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes auth-spin { to { transform: rotate(360deg); } }
 @keyframes workspace-enter { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes result-enter { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes pop-in { from { opacity: 0; transform: translateY(-5px) scale(.99); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -326,6 +335,296 @@ kbd { min-width: 18px; padding: 2px 4px; border: 1px solid var(--line-strong); b
   .toast { text-align: center; }
 }
 
+/* Jynex raspberry redesign */
+body {
+  background:
+    radial-gradient(ellipse at 50% -12%, rgba(240, 89, 132, .12), transparent 42rem),
+    linear-gradient(180deg, var(--page), color-mix(in srgb, var(--page) 86%, var(--accent-soft)) 100%);
+  background-attachment: fixed;
+}
+
+.site-header {
+  min-height: 78px;
+  padding-inline: clamp(22px, 7vw, 112px);
+  border-bottom-color: color-mix(in srgb, var(--line) 74%, transparent);
+  background: color-mix(in srgb, var(--page) 84%, transparent);
+}
+
+.brand { font-size: 27px; letter-spacing: -1.8px; }
+.brand span {
+  background: linear-gradient(135deg, #ef466f, #a91055);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.header-actions { gap: 7px; }
+.icon-button { border-radius: 13px; }
+.account-button {
+  min-height: 40px;
+  padding-inline: 16px;
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--line));
+  background: var(--surface);
+  color: var(--accent);
+}
+.account-button:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+.app-main { width: min(1000px, calc(100% - 40px)); padding-top: clamp(78px, 11vh, 124px); }
+body.has-search .app-main { padding-top: 34px; }
+.hero { margin-bottom: 39px; }
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 13px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 70%, var(--accent-soft));
+  color: var(--accent);
+  font-size: 10px;
+  letter-spacing: 1.45px;
+}
+.eyebrow-dot { width: 6px; height: 6px; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent); }
+.hero h1 {
+  margin-top: 21px;
+  font-size: clamp(56px, 9vw, 91px);
+  line-height: .96;
+  letter-spacing: -6.8px;
+  font-weight: 850;
+}
+.hero h1 span {
+  background: linear-gradient(100deg, #eb416b 12%, #bd215d 58%, #8e1b63 100%);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.hero-copy { margin-top: 23px; font-size: 15px; letter-spacing: .01em; }
+
+.search-area { width: min(790px, 100%); }
+.search-form {
+  min-height: 72px;
+  padding: 8px 9px 8px 24px;
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line));
+  border-radius: 22px;
+  background: var(--surface);
+  box-shadow: 0 18px 55px rgba(146, 25, 69, .12), 0 2px 8px rgba(71, 24, 42, .04);
+}
+.search-form:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--line));
+  box-shadow: 0 20px 58px color-mix(in srgb, var(--accent) 17%, transparent), 0 2px 8px rgba(71, 24, 42, .04);
+  transform: translateY(-2px);
+}
+.search-symbol { color: var(--accent); font-size: 29px; }
+.search-form input { font-size: 16px; }
+.search-button, .apply-filters-button, .gate-primary {
+  background: linear-gradient(135deg, #e74570, #c21f5a 65%, #a61a5c);
+  box-shadow: 0 7px 18px rgba(190, 31, 86, .18);
+}
+.search-button { min-height: 52px; min-width: 120px; border-radius: 16px; }
+.search-button:hover, .gate-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d73562, #a9184f 65%, #8c1551);
+  box-shadow: 0 10px 24px rgba(190, 31, 86, .26);
+}
+.clear-button:hover { color: var(--accent); }
+.suggestions, .filter-panel { border-color: color-mix(in srgb, var(--accent) 15%, var(--line)); border-radius: 19px; box-shadow: 0 24px 68px rgba(98, 25, 53, .16); }
+.suggestion-option { border-radius: 12px; }
+.suggestion-option:hover, .suggestion-option[aria-selected="true"] { background: var(--accent-soft); }
+.filter-row { padding-top: 12px; }
+.filter-trigger { border-radius: 999px; }
+.filter-trigger:hover, .filter-details[open] .filter-trigger { border-color: var(--line); background: var(--surface); color: var(--accent); }
+.filter-count { background: var(--accent-soft); }
+
+.search-workspace { width: min(790px, 100%); margin-top: 34px; }
+.tabs-wrap { padding: 0 6px; border-bottom-color: color-mix(in srgb, var(--line) 70%, transparent); }
+.result-tabs { gap: 7px; }
+.result-tab { min-height: 41px; margin: 4px 0; padding-inline: 16px; border-radius: 999px; }
+.result-tab::after { display: none; }
+.result-tab.is-active { background: var(--accent-soft); color: var(--accent); }
+.provider-label { padding: 8px 11px; border: 1px solid var(--line); border-radius: 999px; background: color-mix(in srgb, var(--surface) 78%, transparent); }
+.provider-dot { background: #d52b60; }
+.answer-card { border-radius: 20px; box-shadow: 0 8px 30px color-mix(in srgb, var(--accent) 8%, transparent); }
+.results-header { margin: 19px 5px 8px; font-size: 11px; }
+.results-list { gap: 10px; }
+.result-card {
+  padding: 19px 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+}
+.result-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--line));
+  background: var(--surface);
+  box-shadow: 0 12px 30px rgba(117, 28, 62, .09);
+  transform: translateY(-2px);
+}
+.result-favicon, .result-favicon-fallback { width: 25px; height: 25px; flex-basis: 25px; border-radius: 8px; }
+.result-title { color: color-mix(in srgb, var(--accent) 88%, #54203a); font-size: 19px; letter-spacing: -.35px; }
+.result-title:hover { color: var(--accent-hover); }
+.result-description { font-size: 13px; line-height: 1.72; }
+.mini-action { border-radius: 10px; }
+.empty-state, .error-state { border-radius: 20px; }
+
+.welcome-extras {
+  width: min(790px, 100%);
+  margin-top: 45px;
+  padding: 22px 22px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 12%, var(--line));
+  border-radius: 21px;
+  background: color-mix(in srgb, var(--surface) 76%, transparent);
+  box-shadow: 0 12px 36px rgba(117, 28, 62, .045);
+}
+.welcome-label { color: var(--ink-soft); letter-spacing: 1.1px; }
+.quick-chip { min-height: 39px; padding-inline: 14px; border-radius: 999px; }
+.quick-chip:hover { background: var(--accent-soft); }
+.privacy-note { margin-top: 17px; }
+.site-footer { padding-inline: clamp(22px, 7vw, 112px); border-top-color: color-mix(in srgb, var(--line) 74%, transparent); }
+.site-footer a:hover, .footer-spark { color: var(--accent); }
+
+.access-gate {
+  background:
+    radial-gradient(ellipse at 15% 10%, rgba(245, 78, 124, .18), transparent 35%),
+    radial-gradient(ellipse at 90% 90%, rgba(163, 30, 92, .12), transparent 38%),
+    var(--page);
+}
+.access-card {
+  width: min(480px, 100%);
+  padding: 38px;
+  border-color: color-mix(in srgb, var(--accent) 16%, var(--line));
+  border-radius: 27px;
+  box-shadow: 0 30px 90px rgba(102, 23, 54, .16);
+}
+.gate-eyebrow { letter-spacing: 1.45px; }
+.gate-panel h1 { letter-spacing: -1.4px; }
+.gate-field input { border-radius: 13px; background: var(--surface-soft); }
+.gate-field input:focus { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 11%, transparent); }
+.gate-primary, .gate-secondary, .google-button { min-height: 47px; border-radius: 13px; }
+.gate-secondary:hover, .google-button:hover { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); background: var(--accent-soft); color: var(--accent); }
+.verification-resend { width: 100%; margin-top: 10px; }
+.verification-panel .gate-primary { width: 100%; margin-top: 7px; }
+.verification-panel .gate-copy strong { color: var(--ink); overflow-wrap: anywhere; }
+.password-reset-section { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.password-reset-section h3 { margin: 0; font-size: 14px; }
+.password-reset-section p { margin: 6px 0 13px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.password-reset-section .gate-secondary { width: 100%; }
+.terms-scroll { border-radius: 15px; }
+.terms-retry { width: 100%; margin-top: 10px; }
+.account-history-section { margin-top: 20px; padding-top: 17px; border-top: 1px solid var(--line); }
+.account-history-section h3 { margin: 0; font-size: 14px; }
+.account-history-section p { margin: 6px 0 12px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.account-history-section .gate-secondary { width: 100%; }
+.library-dialog { border-radius: 25px; border-color: color-mix(in srgb, var(--accent) 16%, var(--line)); }
+.toast { border-color: color-mix(in srgb, var(--accent) 18%, var(--line)); border-radius: 14px; }
+
+/* Browser-like new-tab start page */
+.app-main { width: min(1180px, calc(100% - 48px)); padding-top: clamp(58px, 8vh, 92px); padding-bottom: 84px; }
+.welcome-extras {
+  width: min(1080px, 100%);
+  margin: clamp(48px, 7vh, 76px) auto 0;
+  padding: clamp(22px, 3vw, 34px);
+  text-align: left;
+}
+.startpage-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 29px; }
+.startpage-heading .welcome-label { margin-bottom: 9px; }
+.startpage-heading h2 { margin: 0; font-size: clamp(22px, 3vw, 30px); letter-spacing: -1px; }
+.startpage-heading > div > p:last-child { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.startpage-spark { width: 52px; height: 52px; flex: 0 0 52px; display: grid; place-items: center; border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--line)); border-radius: 17px; background: var(--accent-soft); color: var(--accent); font-size: 22px; }
+.startpage-section { padding-bottom: 26px; }
+.startpage-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 14px; }
+.startpage-section-heading h3, .startpage-tip h3 { margin: 0; color: var(--ink); font-size: 14px; letter-spacing: -.2px; }
+.startpage-section-heading p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+.explore-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.explore-card { min-width: 0; min-height: 104px; padding: 15px; display: flex; align-items: center; gap: 11px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); cursor: pointer; text-align: left; transition: transform .18s, border-color .18s, box-shadow .18s, background .18s; }
+.explore-card:hover { border-color: color-mix(in srgb, var(--accent) 34%, var(--line)); background: color-mix(in srgb, var(--accent-soft) 35%, var(--surface)); box-shadow: 0 10px 25px color-mix(in srgb, var(--accent) 8%, transparent); transform: translateY(-3px); }
+.explore-icon { width: 39px; height: 39px; flex: 0 0 39px; display: grid; place-items: center; border-radius: 12px; background: var(--accent-soft); color: var(--accent); font-size: 17px; }
+.explore-travel .explore-icon { background: #fff2df; color: #bd7924; }
+.explore-learning .explore-icon { background: #e9f4ff; color: #367cad; }
+.explore-technology .explore-icon { background: #eeeaff; color: #735fbd; }
+.explore-card-copy { min-width: 0; flex: 1; }
+.explore-card-copy strong, .explore-card-copy small { display: block; }
+.explore-card-copy strong { color: var(--ink); font-size: 11px; font-weight: 750; }
+.explore-card-copy small { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.explore-arrow { align-self: flex-start; color: var(--muted); font-size: 12px; transition: color .18s, transform .18s; }
+.explore-card:hover .explore-arrow { color: var(--accent); transform: translate(2px, -2px); }
+.startpage-columns { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(270px, .75fr); gap: 15px; }
+.startpage-panel { min-width: 0; min-height: 255px; padding: 21px; border: 1px solid var(--line); border-radius: 17px; background: color-mix(in srgb, var(--surface) 75%, transparent); }
+.startpage-panel .text-button { flex: 0 0 auto; }
+.home-recent-list { display: grid; }
+.home-recent-empty { margin: 0; padding: 22px 10px; color: var(--muted); font-size: 11px; text-align: center; }
+.home-recent-row { min-width: 0; display: flex; align-items: center; gap: 5px; border-bottom: 1px solid var(--line); }
+.home-recent-row:last-child { border-bottom: 0; }
+.home-recent-query { min-width: 0; min-height: 44px; flex: 1; padding: 6px 0; display: flex; align-items: center; gap: 10px; border: 0; background: transparent; cursor: pointer; text-align: left; }
+.recent-search-icon { width: 27px; height: 27px; flex: 0 0 27px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 9px; color: var(--muted); font-size: 17px; }
+.home-recent-copy { min-width: 0; flex: 1; }
+.home-recent-copy strong, .home-recent-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.home-recent-copy strong { color: var(--ink-soft); font-size: 11px; font-weight: 650; }
+.home-recent-copy small { margin-top: 4px; color: var(--muted); font-size: 9px; }
+.home-recent-arrow { color: var(--muted); font-size: 12px; opacity: 0; transition: opacity .15s, transform .15s; }
+.home-recent-query:hover .home-recent-arrow { color: var(--accent); opacity: 1; transform: translate(2px, -2px); }
+.home-recent-remove { width: 29px; height: 29px; flex: 0 0 29px; border: 0; border-radius: 8px; background: transparent; color: var(--muted); cursor: pointer; font-size: 17px; opacity: .55; }
+.home-recent-row:hover .home-recent-remove, .home-recent-remove:focus-visible { background: var(--surface-hover); color: var(--danger); opacity: 1; }
+.startpage-tip { position: relative; overflow: hidden; background: linear-gradient(145deg, var(--surface), color-mix(in srgb, var(--accent-soft) 54%, var(--surface))); }
+.startpage-tip .welcome-label { position: relative; margin: 5px 0 12px; }
+.startpage-tip h3 { position: relative; max-width: 230px; font-size: 19px; line-height: 1.25; letter-spacing: -.6px; }
+.startpage-tip > p:not(.welcome-label) { position: relative; max-width: 300px; margin: 10px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.tip-art { position: absolute; top: 9px; right: 0; width: 145px; height: 112px; color: var(--accent); opacity: .55; }
+.tip-orbit { position: absolute; top: 0; right: -28px; width: 125px; height: 125px; border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent); border-radius: 50%; }
+.tip-orbit-two { top: 21px; right: -7px; width: 83px; height: 83px; }
+.tip-star { position: absolute; top: 37px; right: 29px; font-size: 24px; }
+.tip-action { position: relative; margin-top: 17px; padding: 0; display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--accent); cursor: pointer; font-size: 11px; font-weight: 750; }
+.tip-action:hover span { transform: translateX(3px); }
+.tip-action span { transition: transform .15s; }
+.welcome-extras .privacy-note { margin: 22px 0 0; text-align: center; }
+.library-dialog[data-open-fallback="true"] { position: fixed; inset: 0; z-index: 120; margin: auto; box-shadow: 0 0 0 100vmax rgba(12, 18, 32, .43), var(--shadow); }
+:root.dark .explore-travel .explore-icon { background: #49321c; color: #edb05d; }
+:root.dark .explore-learning .explore-icon { background: #1e394e; color: #82c5f2; }
+:root.dark .explore-technology .explore-icon { background: #332a50; color: #c1adff; }
+
+:root.dark body {
+  background:
+    radial-gradient(ellipse at 50% -12%, rgba(222, 43, 99, .16), transparent 42rem),
+    linear-gradient(180deg, var(--page), #1e1018 100%);
+}
+:root.dark .brand span, :root.dark .hero h1 span { background-image: linear-gradient(100deg, #ff8aa8, #ff5b89 58%, #e24c9a); }
+:root.dark .account-button { background: var(--surface); }
+:root.dark .result-title { color: #ff8aa8; }
+:root.dark .result-title:hover { color: #ffc0d0; }
+:root.dark .search-button, :root.dark .apply-filters-button, :root.dark .gate-primary { color: #fff; }
+:root.dark .welcome-extras { background: color-mix(in srgb, var(--surface) 92%, transparent); }
+
+@media (max-width: 700px) {
+  .app-main { padding-top: 62px; }
+  .hero h1 { letter-spacing: -4.5px; }
+  .welcome-extras { margin-top: 35px; }
+}
+@media (max-width: 850px) {
+  .explore-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .startpage-columns { grid-template-columns: 1fr; }
+  .startpage-tip { min-height: 210px; }
+}
+@media (max-width: 520px) {
+  .site-header { min-height: 67px; }
+  .brand { font-size: 24px; }
+  .app-main { width: min(100% - 28px, 950px); padding-top: 51px; }
+  .hero { margin-bottom: 27px; }
+  .hero h1 { font-size: clamp(46px, 13vw, 65px); letter-spacing: -3.7px; }
+  .hero-copy { max-width: 330px; }
+  .search-form { min-height: 60px; padding-left: 14px; border-radius: 17px; }
+  .search-button { min-height: 44px; border-radius: 13px; }
+  .filter-row { padding-top: 9px; }
+  .search-workspace { margin-top: 22px; }
+  .result-card { padding: 17px 13px 18px; }
+  .result-title { font-size: 17px; }
+  .result-actions { right: 9px; }
+  .welcome-extras { padding: 19px 13px 17px; border-radius: 18px; }
+  .app-main { width: min(100% - 28px, 950px); }
+  .startpage-heading { margin-bottom: 23px; }
+  .startpage-spark { width: 42px; height: 42px; flex-basis: 42px; border-radius: 14px; }
+  .explore-grid { grid-template-columns: 1fr; gap: 8px; }
+  .explore-card { min-height: 76px; padding: 11px; }
+  .startpage-panel { min-height: auto; padding: 16px 13px; }
+  .startpage-section-heading { align-items: flex-start; }
+  .startpage-section-heading .text-button { font-size: 10px; }
+  .quick-searches { gap: 7px; }
+  .quick-chip { min-height: 36px; font-size: 10px; }
+  .access-card { padding: 27px 22px; }
+}
+
   </style>
 
 </head>
@@ -333,7 +632,13 @@ kbd { min-width: 18px; padding: 2px 4px; border: 1px solid var(--line-strong); b
   <main class="access-gate" id="accessGate" aria-live="polite">
     <section class="access-card" aria-labelledby="accessTitle">
       <a class="brand access-brand" href="./" aria-label="Jynex home">Jynex<span>.</span></a>
-      <section id="authPanel" class="gate-panel" aria-describedby="authStatus">
+      <section id="authLoadingPanel" class="gate-panel auth-loading-panel" aria-live="polite">
+        <p class="gate-eyebrow">Welcome back</p>
+        <h1>Restoring your session</h1>
+        <span class="auth-loading-indicator" aria-hidden="true"></span>
+        <p class="gate-copy">Checking your account…</p>
+      </section>
+      <section id="authPanel" class="gate-panel" aria-describedby="authStatus" hidden>
         <p class="gate-eyebrow">Search starts here</p>
         <h1 id="accessTitle">Welcome to Jynex</h1>
         <p class="gate-copy">Create an account or sign in to continue.</p>
@@ -351,21 +656,31 @@ kbd { min-width: 18px; padding: 2px 4px; border: 1px solid var(--line-strong); b
         <div class="gate-links"><button class="gate-link" id="authModeSwitch" type="button">Create an account</button><button class="gate-link" id="forgotPasswordButton" type="button">Forgot password?</button></div>
         <p class="gate-status" id="authStatus" role="status"></p>
       </section>
+      <section id="verificationPanel" class="gate-panel verification-panel" aria-labelledby="verificationTitle" aria-describedby="verificationStatus" hidden>
+        <p class="gate-eyebrow">Verify your email</p>
+        <h1 id="verificationTitle">Check your inbox</h1>
+        <p class="gate-copy">We sent a verification link to <strong id="verificationEmail"></strong>. Verify your address before using Jynex.</p>
+        <button class="gate-primary" id="checkVerificationButton" type="button">I’ve verified my email</button>
+        <button class="gate-secondary verification-resend" id="resendVerificationButton" type="button">Resend verification email</button>
+        <p class="gate-status" id="verificationStatus" role="status"></p>
+        <div class="gate-links"><button class="gate-link" id="verificationSignOut" type="button">Sign out</button></div>
+      </section>
       <section id="termsPanel" class="gate-panel terms-panel" aria-labelledby="termsTitle" aria-describedby="termsStatus" hidden>
         <p class="gate-eyebrow">One more step</p>
         <h1 id="termsTitle">Terms of Service</h1>
         <div class="terms-scroll" tabindex="0" aria-label="Terms of Service text">
           <p><strong>Effective date: November 20, 2026</strong></p>
           <h2>1. About Jynex</h2><p>Jynex provides a search interface. Web results are supplied by Purili and image results by Wikimedia Commons. Those services and the websites they link to are operated by third parties.</p>
-          <h2>2. Your account</h2><p>You must sign in with an email and password to use Jynex. Keep your password secure and tell the project maintainer if you believe someone has accessed your account without permission.</p>
+          <h2>2. Your account</h2><p>You must sign in with Google or with an email address and password to use Jynex. Keep your sign-in details secure and tell the project maintainer if you believe someone has accessed your account without permission.</p>
           <h2>3. Acceptable use</h2><p>Use Jynex lawfully. Do not interfere with the service, attempt unauthorized access, or use it to distribute harmful or unlawful material. Follow the terms and policies of third-party services and websites you visit.</p>
           <h2>4. Search results and images</h2><p>Search results, descriptions, and images may be incomplete, inaccurate, unavailable, or changed by their providers. Jynex does not control linked websites. Image reuse terms vary; check the license and attribution details on each Wikimedia Commons file page before reusing an image.</p>
           <h2>5. Availability</h2><p>Jynex and its third-party services are provided on an “as available” basis. Features may change or stop working. Nothing in these terms excludes rights that cannot be excluded under applicable law.</p>
-          <h2>6. Data and privacy</h2><p>Firebase Authentication processes your email address and account credentials to sign you in. Jynex stores your acceptance of these terms with your account. Recent searches, saved links, and theme preference are stored in this browser. Search requests are sent to Purili; image searches are sent to Wikimedia Commons.</p>
+          <h2>6. Data and privacy</h2><p>Firebase Authentication processes your email address and account credentials to sign you in. Your acceptance of these terms is saved with your Firebase account and checked before the app opens. Recent searches, saved links, and theme preference are stored in this browser. Search requests are sent to Purili; image searches are sent to Wikimedia Commons.</p>
           <h2>7. Changes and contact</h2><p>These terms may be updated when the service changes. If a material update requires new acceptance, Jynex will ask you to accept the updated version before continuing. Contact the Jynex maintainer through the repository where you accessed the service.</p>
         </div>
         <label class="terms-consent"><input id="tosAccepted" type="checkbox"><span>I have read and agree to the Terms of Service.</span></label>
         <div class="terms-actions"><button class="gate-secondary" id="termsSignOut" type="button">Sign out</button><button class="gate-primary" id="acceptTermsButton" type="button" disabled>Accept and continue</button></div>
+        <button class="gate-secondary terms-retry" id="retryTermsCheckButton" type="button" hidden>Retry account check</button>
         <p class="gate-status" id="termsStatus" role="status"></p>
       </section>
     </section>
@@ -433,13 +748,33 @@ kbd { min-width: 18px; padding: 2px 4px; border: 1px solid var(--line-strong); b
     </section>
 
     <section class="welcome-extras" id="welcomeExtras" aria-label="Search shortcuts">
-      <p class="welcome-label">Start exploring</p>
-      <div class="quick-searches">
-        <button type="button" class="quick-chip" data-query="how solar panels work"><span>✦</span> How solar panels work</button>
-        <button type="button" class="quick-chip" data-query="best places to visit in Japan"><span>⌖</span> Places to visit in Japan</button>
-        <button type="button" class="quick-chip" data-query="latest space discoveries"><span>◌</span> Space discoveries</button>
+      <div class="startpage-heading">
+        <div><p class="welcome-label">Your web, at a glance</p><h2>Where will curiosity take you?</h2><p>Pick up where you left off or explore a new corner of the web.</p></div>
+        <span class="startpage-spark" aria-hidden="true">✦</span>
       </div>
-      <p class="privacy-note">Searches run through Purili’s independent web index. Your saved items stay in this browser.</p>
+      <section class="startpage-section" aria-labelledby="exploreTitle">
+        <div class="startpage-section-heading"><div><h3 id="exploreTitle">Explore something new</h3><p>Ideas to get your next search started</p></div></div>
+        <div class="explore-grid">
+          <button class="explore-card explore-science" type="button" data-query="new discoveries in science"><span class="explore-icon">✧</span><span class="explore-card-copy"><strong>Science &amp; space</strong><small>Discover what’s new out there</small></span><span class="explore-arrow">↗</span></button>
+          <button class="explore-card explore-travel" type="button" data-query="beautiful places to visit around the world"><span class="explore-icon">⌖</span><span class="explore-card-copy"><strong>Places &amp; travel</strong><small>Find somewhere inspiring</small></span><span class="explore-arrow">↗</span></button>
+          <button class="explore-card explore-learning" type="button" data-query="learn a new skill online"><span class="explore-icon">▤</span><span class="explore-card-copy"><strong>Learn something</strong><small>Follow a question further</small></span><span class="explore-arrow">↗</span></button>
+          <button class="explore-card explore-technology" type="button" data-query="useful new technology and tools"><span class="explore-icon">⌘</span><span class="explore-card-copy"><strong>Technology</strong><small>See what people are building</small></span><span class="explore-arrow">↗</span></button>
+        </div>
+      </section>
+      <div class="startpage-columns">
+        <section class="startpage-panel" aria-labelledby="homeRecentTitle">
+          <div class="startpage-section-heading"><div><h3 id="homeRecentTitle">Pick up where you left off</h3><p>Your latest searches on this device</p></div><button class="text-button" id="homeLibraryButton" type="button">View library <span aria-hidden="true">↗</span></button></div>
+          <div class="home-recent-list" id="homeRecentSearches"><p class="home-recent-empty">Your recent searches will appear here.</p></div>
+        </section>
+        <section class="startpage-panel startpage-tip" aria-labelledby="searchTipsTitle">
+          <div class="tip-art" aria-hidden="true"><span class="tip-orbit tip-orbit-one"></span><span class="tip-orbit tip-orbit-two"></span><span class="tip-star">✦</span></div>
+          <p class="welcome-label">A little search tip</p>
+          <h3 id="searchTipsTitle">Get closer to what you mean.</h3>
+          <p>Use Filters to search for an exact phrase, limit results to a website, or find a specific file type.</p>
+          <button class="tip-action" id="homeFiltersButton" type="button">Explore search filters <span aria-hidden="true">→</span></button>
+        </section>
+      </div>
+      <p class="privacy-note">Search results come from an independent web index. Your saved items stay in this browser.</p>
     </section>
   </main>
 
@@ -454,13 +789,16 @@ kbd { min-width: 18px; padding: 2px 4px; border: 1px solid var(--line-strong); b
   <dialog class="library-dialog account-dialog" id="accountDialog" aria-labelledby="accountTitle">
     <div class="dialog-topline"><div><p class="eyebrow dialog-eyebrow">Signed in</p><h2 id="accountTitle">Your account</h2></div><button class="icon-button close-dialog" id="closeAccountButton" type="button" aria-label="Close account">×</button></div>
     <p class="account-email-label">Email address</p><p class="account-email" id="accountEmail"></p>
-    <form id="changePasswordForm" class="password-form">
+    <section class="account-history-section">
+      <h3>Search history</h3>
+      <p>Remove all recent searches saved in this browser for your account.</p>
+      <button class="gate-secondary" id="clearHistoryButton" type="button">Clear all search history</button>
+    </section>
+    <section class="password-reset-section" id="passwordResetSection">
       <h3>Change password</h3>
-      <label class="gate-field">Current password<input id="currentPassword" type="password" autocomplete="current-password" required></label>
-      <label class="gate-field">New password<input id="newPassword" type="password" autocomplete="new-password" minlength="6" required></label>
-      <label class="gate-field">Confirm new password<input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="6" required></label>
-      <button class="gate-secondary" type="submit">Update password</button>
-    </form>
+      <p>We’ll email you a secure link to choose a new password.</p>
+      <button class="gate-secondary" id="changePasswordButton" type="button">Send password reset email</button>
+    </section>
     <p class="google-password-note" id="googlePasswordNote" hidden>This account uses Google sign-in. Manage its password in your Google Account.</p>
     <p class="gate-status" id="accountStatus" role="status"></p>
     <button class="account-signout" id="signOutButton" type="button">Sign out</button>
@@ -468,7 +806,7 @@ kbd { min-width: 18px; padding: 2px 4px; border: 1px solid var(--line-strong); b
   </div>
     <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-app.js";
-import { EmailAuthProvider, GoogleAuthProvider, createUserWithEmailAndPassword, getAuth, onAuthStateChanged, reauthenticateWithCredential, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut, updatePassword } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
+import { GoogleAuthProvider, createUserWithEmailAndPassword, getAuth, onAuthStateChanged, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-auth.js";
 import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.gstatic.com/firebasejs/13.4.0/firebase-firestore.js";
 
 (() => {
@@ -486,7 +824,9 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   const firebaseApp = initializeApp(firebaseConfig);
   const auth = getAuth(firebaseApp);
   const db = getFirestore(firebaseApp);
+  // Keep this version stable so an existing acceptance remains valid after reloads.
   const TERMS_VERSION = "2026-11-20";
+  const ACCEPTED_TERMS_VERSIONS = new Set([TERMS_VERSION, "2026-11-20-v3"]);
   const API = "https://puri.li";
   const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
   const STORAGE = { theme: "jynex-theme", recent: "jynex-recent", saved: "jynex-saved" };
@@ -498,14 +838,14 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const ui = {
     body: document.body,
-    appShell: $("#appShell"), accessGate: $("#accessGate"), authPanel: $("#authPanel"), termsPanel: $("#termsPanel"),
+    appShell: $("#appShell"), accessGate: $("#accessGate"), authLoadingPanel: $("#authLoadingPanel"), authPanel: $("#authPanel"), verificationPanel: $("#verificationPanel"), termsPanel: $("#termsPanel"),
     authForm: $("#authForm"), authEmail: $("#authEmail"), authPassword: $("#authPassword"), authConfirmPassword: $("#authConfirmPassword"),
     authSubmit: $("#authSubmit"), googleSignInButton: $("#googleSignInButton"), authModeSwitch: $("#authModeSwitch"), confirmPasswordField: $("#confirmPasswordField"),
     forgotPasswordButton: $("#forgotPasswordButton"), authStatus: $("#authStatus"), tosAccepted: $("#tosAccepted"),
-    acceptTermsButton: $("#acceptTermsButton"), termsStatus: $("#termsStatus"), termsSignOut: $("#termsSignOut"),
+    verificationEmail: $("#verificationEmail"), verificationStatus: $("#verificationStatus"), resendVerificationButton: $("#resendVerificationButton"), checkVerificationButton: $("#checkVerificationButton"), verificationSignOut: $("#verificationSignOut"),
+    termsScroll: $(".terms-scroll"), termsConsent: $(".terms-consent"), acceptTermsButton: $("#acceptTermsButton"), retryTermsCheckButton: $("#retryTermsCheckButton"), termsStatus: $("#termsStatus"), termsSignOut: $("#termsSignOut"),
     accountButton: $("#accountButton"), accountDialog: $("#accountDialog"), accountEmail: $("#accountEmail"),
-    changePasswordForm: $("#changePasswordForm"), googlePasswordNote: $("#googlePasswordNote"), currentPassword: $("#currentPassword"), newPassword: $("#newPassword"),
-    confirmNewPassword: $("#confirmNewPassword"), accountStatus: $("#accountStatus"), signOutButton: $("#signOutButton"),
+    changePasswordButton: $("#changePasswordButton"), googlePasswordNote: $("#googlePasswordNote"), accountStatus: $("#accountStatus"), clearHistoryButton: $("#clearHistoryButton"), signOutButton: $("#signOutButton"),
     form: $("#searchForm"), input: $("#query"), searchButton: $("#searchButton"), clearButton: $("#clearButton"),
     suggestions: $("#suggestions"), searchArea: $(".search-area"), workspace: $("#searchWorkspace"), welcome: $("#welcomeExtras"),
     resultsHeader: $("#resultsHeader"), resultsList: $("#resultsList"), pagination: $("#pagination"),
@@ -527,6 +867,8 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   let authMode = "signin";
   let signedInUser = null;
   let storageUserId = null;
+  let authGateSequence = 0;
+  const verificationEmailRequests = new Map();
 
   function readStorage(key, fallback) {
     try {
@@ -570,6 +912,18 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     return node;
   }
 
+  function formatDate(timestamp) {
+    const date = new Date(Number(timestamp));
+    if (!Number.isFinite(date.getTime())) return "Recently";
+    const day = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const daysAgo = Math.round((today - day) / 86_400_000);
+    if (daysAgo === 0) return "Today";
+    if (daysAgo === 1) return "Yesterday";
+    return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(date);
+  }
+
   function setStatus(node, message = "", isError = false) {
     node.textContent = message;
     node.dataset.error = String(isError);
@@ -585,9 +939,12 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
       "auth/popup-blocked": "Your browser blocked the Google sign-in popup. Allow popups for this site and try again.",
       "auth/account-exists-with-different-credential": "An account already exists with this email. Sign in using its existing method first.",
       "auth/too-many-requests": "Too many attempts. Wait a little and try again.",
+      "auth/quota-exceeded": "Email sending is temporarily limited for this project. Try again later.",
       "auth/network-request-failed": "Could not reach Firebase. Check your connection and try again.",
       "auth/operation-not-allowed": "Email and password sign-in is not enabled in Firebase Authentication.",
-      "auth/requires-recent-login": "Sign in again before changing your password.",
+      "auth/unauthorized-continue-uri": "This website address is not authorized for Firebase email links. Add the site domain in Firebase Authentication settings.",
+      "auth/unauthorized-domain": "This website domain is not authorized in Firebase Authentication settings.",
+      "auth/requires-recent-login": "Sign in again before continuing.",
       "auth/user-not-found": "No account was found for that email.",
       "auth/wrong-password": "The current password is incorrect."
     };
@@ -599,19 +956,40 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     storageUserId = null;
     ui.appShell.hidden = true;
     ui.accessGate.hidden = false;
+    ui.authLoadingPanel.hidden = true;
     ui.authPanel.hidden = false;
+    ui.verificationPanel.hidden = true;
     ui.termsPanel.hidden = true;
     if (message) setStatus(ui.authStatus, message, true);
   }
 
-  function showTermsGate(user, message = "") {
+  function showVerificationGate(user, message = "") {
+    signedInUser = user;
+    storageUserId = null;
+    ui.appShell.hidden = true;
+    ui.accessGate.hidden = false;
+    ui.authLoadingPanel.hidden = true;
+    ui.authPanel.hidden = true;
+    ui.verificationPanel.hidden = false;
+    ui.termsPanel.hidden = true;
+    ui.verificationEmail.textContent = user.email || "your email address";
+    setStatus(ui.verificationStatus, message);
+  }
+
+  function showTermsGate(user, message = "", readFailed = false) {
     signedInUser = user;
     ui.appShell.hidden = true;
     ui.accessGate.hidden = false;
+    ui.authLoadingPanel.hidden = true;
     ui.authPanel.hidden = true;
+    ui.verificationPanel.hidden = true;
     ui.termsPanel.hidden = false;
     ui.tosAccepted.checked = false;
     ui.acceptTermsButton.disabled = true;
+    ui.termsScroll.hidden = readFailed;
+    ui.termsConsent.hidden = readFailed;
+    ui.acceptTermsButton.hidden = readFailed;
+    ui.retryTermsCheckButton.hidden = !readFailed;
     setStatus(ui.termsStatus, message, Boolean(message));
   }
 
@@ -620,11 +998,31 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     storageUserId = user.uid;
     ui.accountEmail.textContent = user.email || "Email unavailable";
     ui.accessGate.hidden = true;
+    ui.authLoadingPanel.hidden = true;
     ui.appShell.hidden = false;
     const hasPassword = user.providerData.some(provider => provider.providerId === "password");
-    ui.changePasswordForm.hidden = !hasPassword;
+    ui.changePasswordButton.hidden = !hasPassword;
     ui.googlePasswordNote.hidden = hasPassword;
     updateSavedCount();
+    renderHomeRecent();
+  }
+
+  async function requestVerificationEmail(user, force = false) {
+    if (!user?.uid) throw new Error("Sign in again to request a verification email.");
+    const existingRequest = verificationEmailRequests.get(user.uid);
+    if (existingRequest) return existingRequest;
+
+    const cooldownKey = `jynex-verification-sent:${user.uid}`;
+    let lastSentAt = 0;
+    try { lastSentAt = Number(localStorage.getItem(cooldownKey)) || 0; } catch { /* Continue without a resend cooldown. */ }
+    if (!force && Date.now() - lastSentAt < 120_000) return "recent";
+
+    const request = sendEmailVerification(user).then(() => {
+      try { localStorage.setItem(cooldownKey, String(Date.now())); } catch { /* The email was still requested. */ }
+      return "sent";
+    }).finally(() => verificationEmailRequests.delete(user.uid));
+    verificationEmailRequests.set(user.uid, request);
+    return request;
   }
 
   function setAuthMode(mode) {
@@ -644,33 +1042,61 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     ui.acceptTermsButton.disabled = true;
     setStatus(ui.termsStatus, "Saving your acceptance…");
     try {
-      await setDoc(doc(db, "users", signedInUser.uid), {
-        email: signedInUser.email || "",
-        termsAccepted: true,
+      await setDoc(doc(db, "userConsents", signedInUser.uid), {
         termsVersion: TERMS_VERSION,
-        termsAcceptedAt: serverTimestamp()
+        acceptedAt: serverTimestamp()
       });
       showApp(signedInUser);
-    } catch (error) {
+    } catch {
       ui.acceptTermsButton.disabled = false;
-      setStatus(ui.termsStatus, `Could not save your acceptance. Check that Cloud Firestore is enabled and its security rules are deployed. ${authMessage(error)}`, true);
+      setStatus(ui.termsStatus, "Jynex could not save your acceptance to your account. Check that Cloud Firestore is enabled and its security rules are published, then try again.", true);
     }
   }
 
-  onAuthStateChanged(auth, async user => {
+  async function routeAuthenticatedUser(user) {
+    const sequence = ++authGateSequence;
     if (!user) {
       showAuthGate();
       return;
     }
-    showTermsGate(user, "Checking your account…");
     try {
-      const profile = await getDoc(doc(db, "users", user.uid));
-      if (profile.exists() && profile.data().termsAccepted === true && profile.data().termsVersion === TERMS_VERSION) showApp(user);
-      else showTermsGate(user);
+      await user.reload();
+      const refreshedUser = auth.currentUser || user;
+      if (sequence !== authGateSequence || auth.currentUser?.uid !== user.uid) return;
+      signedInUser = refreshedUser;
+      const isGoogleUser = refreshedUser.providerData.some(provider => provider.providerId === "google.com");
+      if (!refreshedUser.emailVerified && !isGoogleUser) {
+        showVerificationGate(refreshedUser, "Sending a verification link…");
+        const delivery = await requestVerificationEmail(refreshedUser);
+        if (sequence !== authGateSequence) return;
+        setStatus(ui.verificationStatus, delivery === "sent"
+          ? `A verification link was sent to ${refreshedUser.email}. Check your inbox and spam folder.`
+          : `A verification link was recently sent to ${refreshedUser.email}. Check your inbox and spam folder.`);
+        return;
+      }
+      await refreshedUser.getIdToken(true);
+      storageUserId = refreshedUser.uid;
+      const consent = await getDoc(doc(db, "userConsents", refreshedUser.uid));
+      if (sequence !== authGateSequence || auth.currentUser?.uid !== refreshedUser.uid) return;
+      const acceptance = consent.exists() ? consent.data() : null;
+      if (ACCEPTED_TERMS_VERSIONS.has(acceptance?.termsVersion)) {
+        showApp(refreshedUser);
+        return;
+      }
+      // Older Jynex builds saved acceptance at users/{uid}; honor it to avoid asking again.
+      const legacyConsent = await getDoc(doc(db, "users", refreshedUser.uid));
+      if (sequence !== authGateSequence || auth.currentUser?.uid !== refreshedUser.uid) return;
+      if (legacyConsent.exists() && legacyConsent.data().termsAccepted === true && ACCEPTED_TERMS_VERSIONS.has(legacyConsent.data().termsVersion)) showApp(refreshedUser);
+      else showTermsGate(refreshedUser);
     } catch (error) {
-      showTermsGate(user, `Could not verify your Terms acceptance. Check that Cloud Firestore is enabled and its security rules are deployed. ${authMessage(error)}`);
+      if (sequence !== authGateSequence) return;
+      const isGoogleUser = user.providerData.some(provider => provider.providerId === "google.com");
+      if (!user.emailVerified && !isGoogleUser) showVerificationGate(user, `We couldn’t confirm your email yet. ${authMessage(error)}`);
+      else showTermsGate(user, `Could not check your Terms acceptance. ${authMessage(error)}`, true);
     }
-  }, error => showAuthGate(authMessage(error)));
+  }
+
+  onAuthStateChanged(auth, routeAuthenticatedUser, error => showAuthGate(authMessage(error)));
 
   function safeWebUrl(value) {
     try {
@@ -746,6 +1172,36 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     return Array.isArray(items) ? items.filter(item => item && typeof item.q === "string") : [];
   }
 
+  function renderHomeRecent() {
+    const container = $("#homeRecentSearches");
+    if (!container) return;
+    const records = getRecent().slice(0, 5);
+    container.replaceChildren();
+    if (!records.length) {
+      container.append(element("p", "home-recent-empty", "Your recent searches will appear here."));
+      return;
+    }
+    records.forEach(record => {
+      const row = element("div", "home-recent-row");
+      const reopen = element("button", "home-recent-query");
+      reopen.type = "button";
+      reopen.setAttribute("aria-label", `Search again for ${record.q}`);
+      reopen.append(element("span", "recent-search-icon", "⌕"));
+      const copy = element("span", "home-recent-copy");
+      copy.append(element("strong", "", record.q));
+      copy.append(element("small", "", formatDate(record.searchedAt)));
+      reopen.append(copy, element("span", "home-recent-arrow", "↗"));
+      reopen.addEventListener("click", () => useRecent(record));
+      const remove = element("button", "home-recent-remove", "×");
+      remove.type = "button";
+      remove.title = `Remove “${record.q}” from history`;
+      remove.setAttribute("aria-label", `Remove “${record.q}” from search history`);
+      remove.addEventListener("click", () => removeRecentSearch(record));
+      row.append(reopen, remove);
+      container.append(row);
+    });
+  }
+
   function getSaved() {
     const items = readStorage(STORAGE.saved, []);
     return Array.isArray(items) ? items.filter(item => item && safeWebUrl(item.url)) : [];
@@ -757,6 +1213,14 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     const items = getRecent().filter(item => recentKey(item) !== recentKey(record));
     items.unshift({ ...record, searchedAt: Date.now() });
     writeStorage(STORAGE.recent, items.slice(0, MAX_RECENT));
+    renderHomeRecent();
+  }
+
+  function removeRecentSearch(record) {
+    writeStorage(STORAGE.recent, getRecent().filter(item => recentKey(item) !== recentKey(record)));
+    renderHomeRecent();
+    if (ui.libraryDialog.open && libraryTab === "recent") renderLibrary();
+    if (!ui.suggestions.hidden && !ui.input.value.trim()) showRecentSuggestions();
   }
 
   function isSaved(url) { return getSaved().some(item => item.url === url); }
@@ -821,7 +1285,23 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
       button.append(icon, document.createTextNode(item.label));
       button.addEventListener("pointerdown", event => event.preventDefault());
       button.addEventListener("click", () => chooseSuggestion(index));
-      ui.suggestions.append(button);
+      if (item.kind === "recent" && item.record) {
+        const row = element("div", "suggestion-row");
+        row.setAttribute("role", "presentation");
+        const remove = element("button", "suggestion-delete", "×");
+        remove.type = "button";
+        remove.title = `Remove “${item.record.q}” from search history`;
+        remove.setAttribute("aria-label", `Remove “${item.record.q}” from search history`);
+        remove.addEventListener("pointerdown", event => event.preventDefault());
+        remove.addEventListener("click", event => {
+          event.stopPropagation();
+          removeRecentSearch(item.record);
+        });
+        row.append(button, remove);
+        ui.suggestions.append(row);
+      } else {
+        ui.suggestions.append(button);
+      }
     });
     ui.suggestions.hidden = false;
     ui.searchArea.classList.add("suggestions-open");
@@ -1304,7 +1784,7 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     refreshFilterSummary();
     ui.input.value = record.q;
     startSearch({ base: record.q, filters: { phrase: record.phrase || "", site: record.site || "", filetype: record.filetype || "" }, tab: "web", page: 1, push: true });
-    ui.libraryDialog.close();
+    closeLibrary();
   }
 
   function switchLibraryTab(tab) {
@@ -1341,17 +1821,16 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
       row.append(main);
       const remove = element("button", "library-remove", "×");
       remove.type = "button";
-      remove.setAttribute("aria-label", libraryTab === "recent" ? "Remove search from history" : "Remove saved result");
+      remove.title = libraryTab === "recent" ? `Remove “${record.q}” from history` : "Remove saved result";
+      remove.setAttribute("aria-label", libraryTab === "recent" ? `Remove “${record.q}” from search history` : `Remove saved result: ${record.title || record.url}`);
       remove.addEventListener("click", () => {
         if (libraryTab === "recent") {
-          const next = getRecent();
-          next.splice(index, 1);
-          writeStorage(STORAGE.recent, next);
+          removeRecentSearch(record);
         } else {
           writeStorage(STORAGE.saved, getSaved().filter(item => item.url !== record.url));
           updateSavedCount();
         }
-        renderLibrary();
+        if (libraryTab !== "recent") renderLibrary();
         if (!ui.suggestions.hidden && !ui.input.value.trim()) showRecentSuggestions();
       });
       row.append(remove);
@@ -1362,7 +1841,24 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   function openLibrary(tab = libraryTab) {
     switchLibraryTab(tab);
     updateSavedCount();
-    if (!ui.libraryDialog.open) ui.libraryDialog.showModal();
+    if (ui.libraryDialog.open) return;
+    try {
+      ui.libraryDialog.showModal();
+    } catch (error) {
+      // Keep the library accessible in browsers that expose <dialog> without showModal().
+      ui.libraryDialog.dataset.openFallback = "true";
+      ui.libraryDialog.setAttribute("open", "");
+      console.error("Could not open the search library as a modal:", error);
+    }
+  }
+
+  function closeLibrary() {
+    if (ui.libraryDialog.dataset.openFallback === "true") {
+      ui.libraryDialog.removeAttribute("open");
+      delete ui.libraryDialog.dataset.openFallback;
+      return;
+    }
+    if (ui.libraryDialog.open) ui.libraryDialog.close();
   }
 
   ui.form.addEventListener("submit", event => {
@@ -1389,24 +1885,46 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   [ui.phrase, ui.site, ui.filetype].forEach(control => control.addEventListener("input", refreshFilterSummary));
   $$(".result-tab").forEach(button => button.addEventListener("click", () => setTab(button.dataset.tab)));
   $$(".quick-chip").forEach(button => button.addEventListener("click", () => runQuickSearch(button.dataset.query)));
+  $$(".explore-card").forEach(button => button.addEventListener("click", () => runQuickSearch(button.dataset.query)));
+  $("#homeLibraryButton").addEventListener("click", () => openLibrary("recent"));
+  $("#homeFiltersButton").addEventListener("click", () => {
+    ui.filterDetails.open = true;
+    ui.filterDetails.scrollIntoView({ behavior: "smooth", block: "center" });
+    ui.phrase.focus({ preventScroll: true });
+  });
   ui.themeButton.addEventListener("click", () => setTheme(document.documentElement.classList.contains("dark") ? "light" : "dark"));
   ui.libraryButton.addEventListener("click", () => openLibrary("recent"));
+  $("#appShell .site-header .brand").addEventListener("click", event => {
+    event.preventDefault();
+    resetSearch(false);
+    ui.input.blur();
+    closeSuggestions();
+    closeLibrary();
+    if (ui.accountDialog.open) ui.accountDialog.close();
+    updateUrl(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
   ui.authForm.addEventListener("submit", async event => {
     event.preventDefault();
     const email = ui.authEmail.value.trim();
     const password = ui.authPassword.value;
     setStatus(ui.authStatus, authMode === "signup" ? "Creating your account…" : "Signing in…");
     ui.authSubmit.disabled = true;
+    let createdUser = null;
     try {
       if (authMode === "signup") {
         if (password !== ui.authConfirmPassword.value) throw new Error("Passwords do not match.");
-        await createUserWithEmailAndPassword(auth, email, password);
+        const credential = await createUserWithEmailAndPassword(auth, email, password);
+        createdUser = credential.user;
+        await requestVerificationEmail(createdUser, true);
+        showVerificationGate(createdUser, `A verification link was sent to ${createdUser.email}. Check your inbox and spam folder.`);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
       ui.authForm.reset();
     } catch (error) {
-      setStatus(ui.authStatus, authMessage(error), true);
+      if (createdUser) showVerificationGate(createdUser, `Your account was created, but the verification email could not be sent. ${authMessage(error)} Try Resend verification email below.`);
+      else setStatus(ui.authStatus, authMessage(error), true);
     } finally {
       ui.authSubmit.disabled = false;
     }
@@ -1432,13 +1950,46 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     }
     try {
       await sendPasswordResetEmail(auth, email);
-      setStatus(ui.authStatus, "Password reset instructions have been sent if an account exists for that email.");
+      setStatus(ui.authStatus, "If an account uses that address, password reset instructions have been sent. Check your inbox and spam folder.");
     } catch (error) {
       setStatus(ui.authStatus, authMessage(error), true);
     }
   });
+  ui.resendVerificationButton.addEventListener("click", async () => {
+    if (!signedInUser || signedInUser.emailVerified || signedInUser.providerData.some(provider => provider.providerId === "google.com")) return;
+    ui.resendVerificationButton.disabled = true;
+    setStatus(ui.verificationStatus, "Sending verification email…");
+    try {
+      await requestVerificationEmail(signedInUser, true);
+      setStatus(ui.verificationStatus, `A verification link was sent to ${signedInUser.email}. Check your inbox and spam folder.`);
+    } catch (error) {
+      setStatus(ui.verificationStatus, authMessage(error), true);
+    } finally {
+      ui.resendVerificationButton.disabled = false;
+    }
+  });
+  ui.checkVerificationButton.addEventListener("click", async () => {
+    if (!signedInUser) return;
+    ui.checkVerificationButton.disabled = true;
+    setStatus(ui.verificationStatus, "Checking your email verification…");
+    try {
+      await signedInUser.reload();
+      const refreshedUser = auth.currentUser;
+      if (!refreshedUser?.emailVerified) {
+        setStatus(ui.verificationStatus, "We haven’t confirmed your email yet. Open the verification link in your inbox, then try again.", true);
+        return;
+      }
+      await routeAuthenticatedUser(refreshedUser);
+    } catch (error) {
+      setStatus(ui.verificationStatus, authMessage(error), true);
+    } finally {
+      ui.checkVerificationButton.disabled = false;
+    }
+  });
+  ui.verificationSignOut.addEventListener("click", () => signOut(auth).catch(error => setStatus(ui.verificationStatus, authMessage(error), true)));
   ui.tosAccepted.addEventListener("change", () => { ui.acceptTermsButton.disabled = !ui.tosAccepted.checked; });
   ui.acceptTermsButton.addEventListener("click", acceptTerms);
+  ui.retryTermsCheckButton.addEventListener("click", () => routeAuthenticatedUser(signedInUser));
   ui.termsSignOut.addEventListener("click", () => signOut(auth).catch(error => setStatus(ui.termsStatus, authMessage(error), true)));
   ui.accountButton.addEventListener("click", () => {
     setStatus(ui.accountStatus);
@@ -1448,31 +1999,36 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   $("#closeAccountButton").addEventListener("click", () => ui.accountDialog.close());
   ui.accountDialog.addEventListener("click", event => { if (event.target === ui.accountDialog) ui.accountDialog.close(); });
   ui.signOutButton.addEventListener("click", () => signOut(auth).then(() => ui.accountDialog.close()).catch(error => setStatus(ui.accountStatus, authMessage(error), true)));
-  ui.changePasswordForm.addEventListener("submit", async event => {
-    event.preventDefault();
-    if (ui.newPassword.value !== ui.confirmNewPassword.value) {
-      setStatus(ui.accountStatus, "The new passwords do not match.", true);
-      return;
-    }
+  ui.changePasswordButton.addEventListener("click", async () => {
+    if (!signedInUser?.email) return;
+    ui.changePasswordButton.disabled = true;
+    setStatus(ui.accountStatus, "Sending password reset email…");
     try {
-      const credential = EmailAuthProvider.credential(signedInUser.email, ui.currentPassword.value);
-      await reauthenticateWithCredential(signedInUser, credential);
-      await updatePassword(signedInUser, ui.newPassword.value);
-      ui.changePasswordForm.reset();
-      setStatus(ui.accountStatus, "Password updated.");
+      await sendPasswordResetEmail(auth, signedInUser.email);
+      setStatus(ui.accountStatus, `A password reset email was sent to ${signedInUser.email}. Check your inbox and spam folder.`);
     } catch (error) {
       setStatus(ui.accountStatus, authMessage(error), true);
+    } finally {
+      ui.changePasswordButton.disabled = false;
     }
   });
-  $("#closeLibraryButton").addEventListener("click", () => ui.libraryDialog.close());
+  ui.clearHistoryButton.addEventListener("click", () => {
+    writeStorage(STORAGE.recent, []);
+    renderHomeRecent();
+    if (ui.libraryDialog.open && libraryTab === "recent") renderLibrary();
+    if (!ui.suggestions.hidden && !ui.input.value.trim()) showRecentSuggestions();
+    toast("Search history cleared.");
+  });
+  $("#closeLibraryButton").addEventListener("click", closeLibrary);
   $$(".library-tab").forEach(button => button.addEventListener("click", () => switchLibraryTab(button.dataset.libraryTab)));
-  ui.libraryDialog.addEventListener("click", event => { if (event.target === ui.libraryDialog) ui.libraryDialog.close(); });
+  ui.libraryDialog.addEventListener("click", event => { if (event.target === ui.libraryDialog) closeLibrary(); });
   document.addEventListener("keydown", event => {
     const target = event.target;
     const isTyping = target instanceof HTMLElement && (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName));
     if (event.key === "Escape") {
       if (!ui.suggestions.hidden) closeSuggestions();
       if (ui.filterDetails.open && !isTyping) ui.filterDetails.open = false;
+      if (ui.libraryDialog.dataset.openFallback === "true") closeLibrary();
     }
     if (!isTyping && (event.key === "/" || ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k"))) {
       event.preventDefault();
