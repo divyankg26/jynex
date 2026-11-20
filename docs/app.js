@@ -59,25 +59,135 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   let libraryTab = "recent";
   let authMode = "signin";
   let signedInUser = null;
-  let storageUserId = null;
+  let libraryOwnerUid = null;
+  let libraryLoaded = false;
+  let userLibrary = { recent: [], saved: [] };
+  let libraryWriteQueue = Promise.resolve();
+  let pendingLibraryNotice = "";
   let authGateSequence = 0;
   const verificationEmailRequests = new Map();
 
-  function readStorage(key, fallback) {
+  function readLegacyLibrary(key, uid) {
     try {
-      const scopedKey = key === STORAGE.theme || !storageUserId ? key : `${key}:${storageUserId}`;
-      const value = JSON.parse(localStorage.getItem(scopedKey));
-      return value ?? fallback;
-    } catch {
-      return fallback;
+      const value = JSON.parse(localStorage.getItem(`${key}:${uid}`));
+      return Array.isArray(value) ? value : [];
+    } catch { return []; }
+  }
+
+  function normalizeRecent(items) {
+    return (Array.isArray(items) ? items : [])
+      .filter(item => item && typeof item.q === "string" && item.q.trim())
+      .map(item => ({
+        q: item.q.slice(0, 200), phrase: typeof item.phrase === "string" ? item.phrase.slice(0, 200) : "",
+        site: typeof item.site === "string" ? item.site.slice(0, 253) : "",
+        filetype: FILETYPES.has(item.filetype) ? item.filetype : "",
+        searchedAt: Number(item.searchedAt) || Date.now()
+      }))
+      .sort((a, b) => b.searchedAt - a.searchedAt);
+  }
+
+  function normalizeSaved(items) {
+    return (Array.isArray(items) ? items : [])
+      .map(item => {
+        const url = safeWebUrl(item?.url);
+        if (!url) return null;
+        return {
+          url, title: typeof item.title === "string" ? item.title.slice(0, 300) : url,
+          displayUrl: typeof item.displayUrl === "string" ? item.displayUrl.slice(0, 300) : new URL(url).hostname,
+          description: typeof item.description === "string" ? item.description.slice(0, 1600) : "",
+          query: typeof item.query === "string" ? item.query.slice(0, 200) : "",
+          savedAt: Number(item.savedAt) || Date.now()
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.savedAt - a.savedAt);
+  }
+
+  function mergeRecent(...lists) {
+    const merged = new Map();
+    lists.flat().forEach(item => {
+      const key = recentKey(item);
+      const current = merged.get(key);
+      if (!current || Number(item.searchedAt) > Number(current.searchedAt)) merged.set(key, item);
+    });
+    return [...merged.values()].sort((a, b) => b.searchedAt - a.searchedAt).slice(0, MAX_RECENT);
+  }
+
+  function mergeSaved(...lists) {
+    const merged = new Map();
+    lists.flat().forEach(item => {
+      const current = merged.get(item.url);
+      if (!current || Number(item.savedAt) > Number(current.savedAt)) merged.set(item.url, item);
+    });
+    return [...merged.values()].sort((a, b) => b.savedAt - a.savedAt).slice(0, MAX_SAVED);
+  }
+
+  function clearLegacyLibrary(uid) {
+    try {
+      localStorage.removeItem(`${STORAGE.recent}:${uid}`);
+      localStorage.removeItem(`${STORAGE.saved}:${uid}`);
+    } catch { /* The cloud copy is already safe if browser storage is unavailable. */ }
+  }
+
+  async function loadUserLibrary(user) {
+    if (libraryLoaded && libraryOwnerUid === user.uid) return true;
+    libraryOwnerUid = user.uid;
+    libraryLoaded = false;
+    const legacyRecent = normalizeRecent(readLegacyLibrary(STORAGE.recent, user.uid));
+    const legacySaved = normalizeSaved(readLegacyLibrary(STORAGE.saved, user.uid));
+    userLibrary = { recent: [], saved: [] };
+    pendingLibraryNotice = "";
+    let cloudRead = false;
+
+    try {
+      const snapshot = await getDoc(doc(db, "userLibraries", user.uid));
+      if (libraryOwnerUid !== user.uid || auth.currentUser?.uid !== user.uid) return false;
+      cloudRead = true;
+      const cloud = snapshot.exists() ? snapshot.data() : {};
+      userLibrary = {
+        recent: mergeRecent(normalizeRecent(cloud.recent), legacyRecent),
+        saved: mergeSaved(normalizeSaved(cloud.saved), legacySaved)
+      };
+      const needsMigration = legacyRecent.length > 0 || legacySaved.length > 0;
+      if (needsMigration) {
+        await setDoc(doc(db, "userLibraries", user.uid), {
+          recent: userLibrary.recent, saved: userLibrary.saved, updatedAt: serverTimestamp()
+        });
+        if (libraryOwnerUid !== user.uid || auth.currentUser?.uid !== user.uid) return false;
+        clearLegacyLibrary(user.uid);
+      }
+      libraryLoaded = true;
+      return true;
+    } catch (error) {
+      if (libraryOwnerUid !== user.uid || auth.currentUser?.uid !== user.uid) return false;
+      // Keep this account's older local data usable while showing the app; later changes retry the cloud write.
+      if (!cloudRead) userLibrary = { recent: legacyRecent, saved: legacySaved };
+      libraryLoaded = true;
+      pendingLibraryNotice = "Your library couldn’t sync with your account. Check your connection and Firestore rules; changes may not be available on other devices yet.";
+      console.error("Could not load or migrate the account library:", error);
+      return false;
     }
   }
 
-  function writeStorage(key, value) {
-    try {
-      const scopedKey = key === STORAGE.theme || !storageUserId ? key : `${key}:${storageUserId}`;
-      localStorage.setItem(scopedKey, JSON.stringify(value));
-    } catch { toast("Browser storage is unavailable in this session."); }
+  function persistUserLibrary() {
+    if (!libraryOwnerUid || !libraryLoaded) return;
+    const uid = libraryOwnerUid;
+    const snapshot = { recent: [...userLibrary.recent], saved: [...userLibrary.saved] };
+    libraryWriteQueue = libraryWriteQueue.catch(() => {}).then(() => setDoc(doc(db, "userLibraries", uid), {
+      ...snapshot, updatedAt: serverTimestamp()
+    })).then(() => {
+      if (libraryOwnerUid === uid) clearLegacyLibrary(uid);
+    }).catch(error => {
+      if (libraryOwnerUid === uid) {
+        toast("Your library couldn’t sync to your account. Check your connection and Firestore rules.");
+        console.error("Could not save the account library:", error);
+      }
+    });
+  }
+
+  function setLibrarySection(section, records) {
+    userLibrary[section] = section === "recent" ? normalizeRecent(records).slice(0, MAX_RECENT) : normalizeSaved(records).slice(0, MAX_SAVED);
+    persistUserLibrary();
   }
 
   function setTheme(theme, persist = true) {
@@ -146,7 +256,9 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
 
   function showAuthGate(message = "") {
     signedInUser = null;
-    storageUserId = null;
+    libraryOwnerUid = null;
+    libraryLoaded = false;
+    userLibrary = { recent: [], saved: [] };
     ui.appShell.hidden = true;
     ui.accessGate.hidden = false;
     ui.authLoadingPanel.hidden = true;
@@ -158,7 +270,6 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
 
   function showVerificationGate(user, message = "") {
     signedInUser = user;
-    storageUserId = null;
     ui.appShell.hidden = true;
     ui.accessGate.hidden = false;
     ui.authLoadingPanel.hidden = true;
@@ -188,7 +299,6 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
 
   function showApp(user) {
     signedInUser = user;
-    storageUserId = user.uid;
     ui.accountEmail.textContent = user.email || "Email unavailable";
     ui.accessGate.hidden = true;
     ui.authLoadingPanel.hidden = true;
@@ -198,6 +308,10 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     ui.googlePasswordNote.hidden = hasPassword;
     updateSavedCount();
     renderHomeRecent();
+    if (pendingLibraryNotice) {
+      toast(pendingLibraryNotice);
+      pendingLibraryNotice = "";
+    }
   }
 
   async function requestVerificationEmail(user, force = false) {
@@ -239,6 +353,7 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
         termsVersion: TERMS_VERSION,
         acceptedAt: serverTimestamp()
       });
+      await loadUserLibrary(signedInUser);
       showApp(signedInUser);
     } catch {
       ui.acceptTermsButton.disabled = false;
@@ -268,19 +383,23 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
         return;
       }
       await refreshedUser.getIdToken(true);
-      storageUserId = refreshedUser.uid;
       const consent = await getDoc(doc(db, "userConsents", refreshedUser.uid));
       if (sequence !== authGateSequence || auth.currentUser?.uid !== refreshedUser.uid) return;
       const acceptance = consent.exists() ? consent.data() : null;
       if (ACCEPTED_TERMS_VERSIONS.has(acceptance?.termsVersion)) {
+        await loadUserLibrary(refreshedUser);
+        if (sequence !== authGateSequence || auth.currentUser?.uid !== refreshedUser.uid) return;
         showApp(refreshedUser);
         return;
       }
       // Older Jynex builds saved acceptance at users/{uid}; honor it to avoid asking again.
       const legacyConsent = await getDoc(doc(db, "users", refreshedUser.uid));
       if (sequence !== authGateSequence || auth.currentUser?.uid !== refreshedUser.uid) return;
-      if (legacyConsent.exists() && legacyConsent.data().termsAccepted === true && ACCEPTED_TERMS_VERSIONS.has(legacyConsent.data().termsVersion)) showApp(refreshedUser);
-      else showTermsGate(refreshedUser);
+      if (legacyConsent.exists() && legacyConsent.data().termsAccepted === true && ACCEPTED_TERMS_VERSIONS.has(legacyConsent.data().termsVersion)) {
+        await loadUserLibrary(refreshedUser);
+        if (sequence !== authGateSequence || auth.currentUser?.uid !== refreshedUser.uid) return;
+        showApp(refreshedUser);
+      } else showTermsGate(refreshedUser);
     } catch (error) {
       if (sequence !== authGateSequence) return;
       const isGoogleUser = user.providerData.some(provider => provider.providerId === "google.com");
@@ -361,8 +480,7 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   }
 
   function getRecent() {
-    const items = readStorage(STORAGE.recent, []);
-    return Array.isArray(items) ? items.filter(item => item && typeof item.q === "string") : [];
+    return userLibrary.recent;
   }
 
   function renderHomeRecent() {
@@ -396,8 +514,7 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   }
 
   function getSaved() {
-    const items = readStorage(STORAGE.saved, []);
-    return Array.isArray(items) ? items.filter(item => item && safeWebUrl(item.url)) : [];
+    return userLibrary.saved;
   }
 
   function recentKey(item) { return [item.q, item.phrase, item.site, item.filetype].join("\u0000"); }
@@ -405,12 +522,12 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
   function rememberSearch(record) {
     const items = getRecent().filter(item => recentKey(item) !== recentKey(record));
     items.unshift({ ...record, searchedAt: Date.now() });
-    writeStorage(STORAGE.recent, items.slice(0, MAX_RECENT));
+    setLibrarySection("recent", items.slice(0, MAX_RECENT));
     renderHomeRecent();
   }
 
   function removeRecentSearch(record) {
-    writeStorage(STORAGE.recent, getRecent().filter(item => recentKey(item) !== recentKey(record)));
+    setLibrarySection("recent", getRecent().filter(item => recentKey(item) !== recentKey(record)));
     renderHomeRecent();
     if (ui.libraryDialog.open && libraryTab === "recent") renderLibrary();
     if (!ui.suggestions.hidden && !ui.input.value.trim()) showRecentSuggestions();
@@ -951,7 +1068,7 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
       url: item.url, title: item.title || item.url, displayUrl: item.displayUrl || new URL(item.url).hostname,
       description: item.description || "", query: item.query || current.base, savedAt: Date.now()
     }, ...items].slice(0, MAX_SAVED);
-    writeStorage(STORAGE.saved, next);
+    setLibrarySection("saved", next);
     updateSavedCount();
     if (current.tab === "web" && ui.workspace.hidden === false) renderWebResultsCacheForBookmark(next, item.url);
     renderLibrary();
@@ -1020,7 +1137,7 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
         if (libraryTab === "recent") {
           removeRecentSearch(record);
         } else {
-          writeStorage(STORAGE.saved, getSaved().filter(item => item.url !== record.url));
+          setLibrarySection("saved", getSaved().filter(item => item.url !== record.url));
           updateSavedCount();
         }
         if (libraryTab !== "recent") renderLibrary();
@@ -1206,7 +1323,7 @@ import { doc, getDoc, getFirestore, serverTimestamp, setDoc } from "https://www.
     }
   });
   ui.clearHistoryButton.addEventListener("click", () => {
-    writeStorage(STORAGE.recent, []);
+    setLibrarySection("recent", []);
     renderHomeRecent();
     if (ui.libraryDialog.open && libraryTab === "recent") renderLibrary();
     if (!ui.suggestions.hidden && !ui.input.value.trim()) showRecentSuggestions();

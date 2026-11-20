@@ -22,6 +22,22 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /userLibraries/{userId} {
+      allow get: if isVerifiedOwner(userId);
+      allow list: if false;
+
+      allow create, update: if isVerifiedOwner(userId)
+        && request.resource.data.keys().hasAll(['recent', 'saved', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['recent', 'saved', 'updatedAt'])
+        && request.resource.data.recent is list
+        && request.resource.data.recent.size() <= 12
+        && request.resource.data.saved is list
+        && request.resource.data.saved.size() <= 80
+        && request.resource.data.updatedAt == request.time;
+
+      allow delete: if false;
+    }
+
     // Read-only compatibility for accounts that accepted in an older Jynex build.
     match /users/{userId} {
       allow get: if isVerifiedOwner(userId);

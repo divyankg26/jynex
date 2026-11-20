@@ -2,6 +2,16 @@
 
 Jynex is a search site that brings web results and images into one place.
 
+## Site pages
+
+- [Home](https://divyankg26.github.io/jynex/) — the public Jynex landing page.
+- [Search app](https://divyankg26.github.io/jynex/app/) — sign in to search the web and images.
+- [FAQ](https://divyankg26.github.io/jynex/faq/) — help with search, accounts, and the library.
+- [About](https://divyankg26.github.io/jynex/about/) — what Jynex is and how its search works.
+- [Privacy Policy](https://divyankg26.github.io/jynex/privacy/) — what information the site handles.
+
+The GitHub Pages site is published from `docs/`. The search app source is in `docs/app.js`, `docs/styles.css`, and `docs/index.template.html`; `python3 docs/build.py` generates `docs/app/index.html`.
+
 ## Get started
 
 1. Open Jynex and choose **Create an account** or **Continue with Google**.
@@ -12,12 +22,12 @@ You must have a verified email and accept the current Terms of Service to use se
 
 ## Search
 
-Enter a query and press **Enter** to search the web. Use the filters to narrow results, switch to **Images** to search Wikimedia Commons, and save useful pages to your library. Recent searches, saved pages, and your theme preference are kept in this browser.
+Enter a query and press **Enter** to search the web. Use the filters to narrow results, switch to **Images** to search Wikimedia Commons, and save useful pages to your library. Recent searches and saved pages are stored in your Firebase account and available when you sign in on another device. Your theme preference stays in this browser.
 
 ## Your account
 
-Open the account menu at the top right to see the signed-in email address, clear all search history, or sign out. If you signed up with email and password, choose **Send password reset email** to receive a secure link for choosing a new password. If you use Google sign-in, manage your password through your Google Account. You can also remove one search at a time from the Search Library.
+Open the account menu at the top right to see the signed-in email address, clear your account’s search history, or sign out. If you signed up with email and password, choose **Send password reset email** to receive a secure link for choosing a new password. If you use Google sign-in, manage your password through your Google Account. You can also remove one search at a time from the Search Library.
 
 ## Privacy
 
-Firebase Authentication handles sign-in and email verification. Firebase stores the version of the Terms of Service you accepted. Web search queries are sent to Purili, and image queries are sent to Wikimedia Commons. Recent searches, saved pages, and theme preference are stored in your browser.
+Firebase Authentication handles sign-in and email verification. Firestore stores the version of the Terms of Service you accepted and keeps your recent searches and saved pages in your account. Web search queries are sent to Purili, and image queries are sent to Wikimedia Commons. Your theme preference is stored in your browser. The current Firestore rules are in `docs/firestore.rules`.
